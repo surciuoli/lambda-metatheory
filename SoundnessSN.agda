@@ -21,7 +21,7 @@ open import Relation.Nullary
 open import Data.Empty
 open import Data.Sum
 open import Relation.Binary.Core hiding (Rel)
-open import Data.Product
+open import Data.Product hiding (Σ)
 open import Data.Nat hiding (_≟_)
 open import Function
 
@@ -30,7 +30,7 @@ infix 4 _⟶²_
 infix 5 _⟶*_
 infix 5 _→sn_
 infix 30 _[_:=_]
-infix 30 _[_:=_,_:=_]
+infix 30 _[_∣_:=_]
 infix 5 _→SN_
 
 _⟶_ : Λ → Λ → Set
@@ -45,8 +45,8 @@ M ⟶² N = ∃ λ P → M →β P × P ∼α N
 _[_:=_] : Λ → V → Λ → Λ
 M [ x := N ] =  M ∙ ι ≺+ (x , N)
 
-_[_:=_,_:=_] : Λ → V → Λ → V → Λ → Λ
-M [ x := N , y := P ] = M ∙ ι ≺+ (x , N) ≺+ (y , P)
+_[_∣_:=_] : Λ → Σ → V → Λ → Λ
+M [ σ ∣ y := P ] = M ∙ σ ≺+ (y , P)
 
 -- Accesibility definition for strong normalizing terms
 
@@ -112,25 +112,24 @@ sn-α {_}{N} M~N (def hi) = def λ N→P → sn-α-aux N→P
 
 -- Lemma 5
 
-subst-compat₁ : ∀ {M N x P} → M ⟶ N → M [ x := P ] ⟶² N [ x := P ]
-subst-compat₁ {ƛ y M · N}{_}{x}{P} (ctxinj ▹β) = M [ x := P , y := v z ] [ z := N [ x := P ] ] , ctxinj ▹β , aux
-  where σ = ι ≺+ (x , P)
-        z = χ (σ , ƛ y M)
+subst-compat₁ : ∀ {M N σ} → M ⟶ N → M ∙ σ ⟶² N ∙ σ 
+subst-compat₁ {ƛ y M · N}{_}{σ} (ctxinj ▹β) = M [ σ ∣ y := v z ] [ z := N ∙ σ ] , ctxinj ▹β , aux
+  where z = χ (σ , ƛ y M)
         z#σ = χ-lemma2 σ (ƛ y M)
-        aux : M [ x := P , y := v z ] [ z := N [ x := P ] ] ∼α M [ y := N ] [ x := P ]
+        aux : M [ σ ∣ y := v z ] [ z := N ∙ σ ] ∼α M [ y := N ] ∙ σ
         aux = begin
-                M [ x := P , y := v z ] [ z := N [ x := P ] ]
+                M [ σ ∣ y := v z ] [ z := N ∙ σ ]
                 ∼⟨ corollary1SubstLemma z#σ ⟩
-                M [ x := P , y := N [ x := P ] ]
+                M [ σ ∣ y := N ∙ σ ]
                 ≈⟨ corollary1Prop7 {M}{N}{σ}{y} ⟩
-                M [ y := N ] [ x := P ]
+                M [ y := N ] ∙ σ
               ∎
 subst-compat₁ {v _ · _} (ctxinj ())
 subst-compat₁ {(_ · _) · _} (ctxinj ())
 subst-compat₁ {v _} (ctxinj ())
 subst-compat₁ {ƛ _ _} (ctxinj ())
-subst-compat₁ (ctx·l c) = {!!}
-subst-compat₁ (ctx·r c) = {!!}
+subst-compat₁ {_ · N}{_}{σ} (ctx·l M→M') = let Q , Mσ→Q , Q~M'σ = subst-compat₁ M→M' in Q · (N ∙ σ) , ctx·l Mσ→Q , ∼· Q~M'σ ∼ρ
+subst-compat₁ {M · _}{_}{σ} (ctx·r N→N') = let Q , Nσ→Q , Q~N'σ = subst-compat₁ N→N' in (M ∙ σ) · Q , ctx·r Nσ→Q , ∼· ∼ρ Q~N'σ
 subst-compat₁ (ctxƛ c) = {!!}
 
 -- Lemma 6
@@ -166,37 +165,25 @@ inv-app-lemma snMN = (def λ M→P → lemma-sn-app-aux₁ snMN M→P) , (def λ
 
 -- Lemma 10 (Weak head expansion)
 
--- start of overhead --
+-- this section has substantial differences --
 
-data sn² : Λ → Set where
-  def : ∀ {M} → (∀ {N} → M ⟶² N → sn² N) → sn² M
+wkh-exp-α : ∀ {M N x Q} → sn N → sn Q → Q ∼α M [ x := N ] → sn (ƛ x M · N)
 
-β-then-βα : ∀ {M N} → M ⟶ N → M ⟶² N
-β-then-βα {_}{N} M→N = N , M→N , ∼ρ
+wkh-exp-α-aux : ∀ {M x N P Q} → sn N → sn Q → Q ∼α M [ x := N ] → ƛ x M · N ⟶ P → sn P
+wkh-exp-α-aux snN snQ Q~M[N/x] (ctxinj ▹β) = sn-α Q~M[N/x] snQ
+wkh-exp-α-aux _ _ _ (ctx·l (ctxinj ()))
+wkh-exp-α-aux {_}{x} snN (def hi) Q~M[N/x] (ctx·l (ctxƛ M→M')) =
+  let _ , M[N/x]→R , R~M'[N/x] = subst-compat₁ M→M'
+      _ , Q→S , R~S  = confl-α (∼σ Q~M[N/x]) M[N/x]→R
+  in wkh-exp-α snN (hi Q→S) (∼τ (∼σ R~S) R~M'[N/x])
+wkh-exp-α-aux {M}{x} (def hi) snQ Q~M[N/x] (ctx·r N→N') = wkh-exp-α (hi N→N') (multistep (subst-compat₂ x M N→N') (sn-α Q~M[N/x] snQ)) ∼ρ
 
-sn²→sn : ∀ {M} → sn² M → sn M
-sn²→sn (def hi) = def λ M→N → sn²→sn (hi (β-then-βα M→N))
-
-sn²-α : ∀ {M N} → M ∼α N → sn² M → sn² N
-sn²-α = {!!}
-
-sn→sn² : ∀ {M} → sn M → sn² M
-sn→sn² {M} (def hi) = def λ {N} → λ { (P , M→P , P~N) → sn²-α P~N (sn→sn² (hi M→P)) }
-  
--- end of overhead --
-
-wkh-exp² : ∀ {M N x} → sn² N → sn² (M [ x := N ]) → sn² (ƛ x M · N)
-
-wkh-exp²-aux : ∀ {M x N P} → sn² N → sn² (M [ x := N ]) → ƛ x M · N ⟶ P → sn² P
-wkh-exp²-aux snN snM[x=N] (ctxinj ▹β) = snM[x=N]
-wkh-exp²-aux snN snM[x=N] (ctx·l (ctxinj ()))
-wkh-exp²-aux snN (def hi) (ctx·l (ctxƛ M→βM')) = wkh-exp² snN (hi (subst-compat₁ M→βM'))
-wkh-exp²-aux {M}{x} (def hi) snM[x=N] (ctx·r N→βN') = wkh-exp² (hi (β-then-βα N→βN')) (sn→sn² (multistep (subst-compat₂ x M N→βN') (sn²→sn snM[x=N])))
-
-wkh-exp² snN snM[x=N] = def λ { (_ , ƛxMN→Q , Q~P) → sn→sn² (sn-α Q~P (sn²→sn (wkh-exp²-aux snN snM[x=N] ƛxMN→Q))) }
+wkh-exp-α snN snQ Q~M[N/x] = def λ ƛxMN→Q → wkh-exp-α-aux snN snQ Q~M[N/x] ƛxMN→Q
 
 wkh-exp : ∀ {M N x} → sn N → sn (M [ x := N ]) → sn (ƛ x M · N)
-wkh-exp snN snM[x=N] = sn²→sn (wkh-exp² (sn→sn² snN) (sn→sn² snM[x=N]))
+wkh-exp snN snM[N/x] = wkh-exp-α snN snM[N/x] ∼ρ
+
+-- end of secion --
 
 -- Lemma 11
 
