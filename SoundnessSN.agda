@@ -24,6 +24,7 @@ open import Relation.Binary.Core hiding (Rel)
 open import Data.Product hiding (Σ)
 open import Data.Nat hiding (_≟_)
 open import Function
+open import Relation.Binary.PropositionalEquality using (sym)
 
 infix 4 _⟶_
 infix 4 _⟶²_
@@ -89,7 +90,16 @@ var-irred (ctxinj ())
 
 confl-α : ∀ {M N P} → M ∼α N → M ⟶ P → ∃ λ Q → N ⟶ Q × P ∼α Q
 confl-α ∼v (ctxinj ())
-confl-α {_}{ƛ y M' · N'} (∼· (∼ƛ z#ƛxM z#ƛyM' xzM~yzM') N~N') (ctxinj ▹β) = M' [ y := N' ] , ctxinj ▹β , {!!} 
+confl-α {ƛ x M · N}{ƛ y M' · N'} (∼· (∼ƛ {.M}{.M'}{.x}{.y}{z} z#ƛxM z#ƛyM' xzM~yzM') N~N') (ctxinj ▹β) = M' [ y := N' ] , ctxinj ▹β , aux
+  where aux = begin
+                M [ x := N ]
+                ≈⟨ lemma≺+ z#ƛxM ⟩
+                M [ x := v z ] [ z := N ]
+                ∼⟨ lemma-subst xzM~yzM' (lemma≺+∼α⇂ {z} lemmaι∼α⇂ N~N') ⟩ 
+                M' [ y := v z ] [ z := N' ]
+                ≈⟨ sym (lemma≺+ z#ƛyM') ⟩
+                M' [ y := N' ]
+              ∎ 
 confl-α (∼· ∼v _) (ctxinj ())
 confl-α (∼· (∼· _ _) _) (ctxinj ())
 confl-α (∼· {_}{_}{_}{N'} M~M' N~N') (ctx·l M→M'') with confl-α M~M' M→M''
@@ -107,6 +117,9 @@ sn-α {_}{N} M~N (def hi) = def λ N→P → sn-α-aux N→P
 
 ⟶²⇒⟶* : ∀ {M N} → M ⟶² N → M ⟶* N
 ⟶²⇒⟶* (_ , M→P , P~N) = trans (just (inj₁ M→P)) (just (inj₂ P~N))
+
+#⇂-preservedby-β : ∀ {M M' z σ} → M ⟶ M' → z #⇂ (σ , M) → z #⇂ (σ , M')
+#⇂-preservedby-β M→M' z#σM = λ x x*M → z#σM x (lemma→α* x*M M→M')
 
 -- end of auxiliary lemmas (overhead) --
 
@@ -130,7 +143,17 @@ subst-compat₁ {v _} (ctxinj ())
 subst-compat₁ {ƛ _ _} (ctxinj ())
 subst-compat₁ {_ · N}{_}{σ} (ctx·l M→M') = let Q , Mσ→Q , Q~M'σ = subst-compat₁ M→M' in Q · (N ∙ σ) , ctx·l Mσ→Q , ∼· Q~M'σ ∼ρ
 subst-compat₁ {M · _}{_}{σ} (ctx·r N→N') = let Q , Nσ→Q , Q~N'σ = subst-compat₁ N→N' in (M ∙ σ) · Q , ctx·r Nσ→Q , ∼· ∼ρ Q~N'σ
-subst-compat₁ (ctxƛ c) = {!!}
+subst-compat₁ {ƛ x M}{ƛ .x M'}{σ} (ctxƛ M→M') = let z = χ (σ , ƛ x M)
+                                                    z#σ = χ-lemma2 σ (ƛ x M)
+                                                    N , Mσ,z/x→N , N~M'σ,z/x = subst-compat₁ {M}{M'} M→M'
+                                                    aux = begin
+                                                            ƛ z N
+                                                            ∼⟨ lemma∼λ N~M'σ,z/x ⟩
+                                                            ƛ z (M' [ σ ∣ x := v z ] )
+                                                            ∼⟨ ∼σ (corollary4-2 (#⇂-preservedby-β (ctxƛ M→M') z#σ)) ⟩
+                                                            ƛ x M' ∙ σ
+                                                          ∎
+                                                in ƛ z N , ctxƛ Mσ,z/x→N , aux
 
 -- Lemma 6
 
