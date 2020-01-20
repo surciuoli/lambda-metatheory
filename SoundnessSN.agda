@@ -24,7 +24,7 @@ open import Relation.Binary.Core hiding (Rel)
 open import Data.Product hiding (Σ)
 open import Data.Nat hiding (_≟_)
 open import Function
-open import Relation.Binary.PropositionalEquality using (sym)
+open import Relation.Binary.PropositionalEquality using (sym; subst₂)
 
 infix 4 _⟶_
 infix 4 _⟶²_
@@ -90,11 +90,8 @@ subst-compat₁ : ∀ {M N σ} → M ⟶ N → M ∙ σ ⟶² N ∙ σ
 var-irred : ∀ {x M} → (v x) ⟶ M → ⊥ 
 var-irred (ctxinj ())
 
-compat⟶²ƛ : ∀ {M N x} → M ⟶² N → ƛ x M ⟶² ƛ x N
-compat⟶²ƛ = {!!}
-
-compat⟶²α : ∀ {M M' N N'} → M ∼α M' → N ∼α N' → M ⟶² N → M' ⟶² N'
-compat⟶²α = {!!}
+≡→α : ∀ {M N} -> M ≡ N -> M ∼α N
+≡→α {M} M≡N = subst₂ _∼α_ refl M≡N (∼ρ {M})
 
 confl-α : ∀ {M N P} → M ∼α N → M ⟶ P → ∃ λ Q → N ⟶ Q × P ∼α Q
 confl-α ∼v (ctxinj ())
@@ -115,14 +112,14 @@ confl-α (∼· {_}{_}{_}{N'} M~M' N~N') (ctx·l M→M'') with confl-α M~M' M�
 confl-α (∼· {_}{M'}{_}{_} M~M' N~N') (ctx·r N→N'') with confl-α N~N' N→N''
 ... | P , N'→P , N''~P = M' · P , ctx·r N'→P , ∼· M~M' N''~P
 confl-α (∼ƛ _ _ _) (ctxinj ())
-confl-α {ƛ x M}{ƛ x' M'}{ƛ .x N} (∼ƛ {_}{_}{_}{_}{y} y#ƛxM y#ƛx'M' M[y/x]~M'[y/x']) (ctxƛ M→N) = 
-  let K₁ , M[y/x]→K₁ , K₁∼N[y/x] = subst-compat₁ M→N
-      K₂ , M'[y/x']→K₂ , K₁∼K₂ = confl-α M[y/x]~M'[y/x'] M[y/x]→K₁
-      K₃ , ƛyM'[y/x']→K₃ , K₃∼ƛyK₁ = compat⟶²ƛ {x = y} (K₂ , M'[y/x']→K₂ , ∼σ K₁∼K₂)
-      ƛyM'[y/x']∼ƛx'M' = ∼σ (corollary4-2' y#ƛx'M')
-      ƛyK₁∼ƛxN = ∼τ (lemma∼λ {x = y} K₁∼N[y/x]) (∼σ (corollary4-2' (lemma→β# y#ƛxM (ctxƛ M→N))))
-      K₄ , ƛx'M'→K₄ , K₄∼ƛxN  = compat⟶²α ƛyM'[y/x']∼ƛx'M' ƛyK₁∼ƛxN (K₃ , ƛyM'[y/x']→K₃ , K₃∼ƛyK₁)
-  in K₄ , ƛx'M'→K₄ , ∼σ K₄∼ƛxN
+confl-α {ƛ x M}{ƛ x' M'}{ƛ .x N} (∼ƛ {_}{_}{_}{.x'}{y} y#ƛxM y#ƛx'M' M[y/x]~M'[y/x']) (ctxƛ M→N) = 
+  let K₁ , M[x'/x]→K₁ , K₁∼N[x'/x] = subst-compat₁ {σ = ι ≺+ (x , v x')} M→N
+      M[x'/x]~M' = subst₂ _∼α_ (sym (lemma≺+ y#ƛxM)) refl (∼τ (∼τ (≡→α (lemmaM∼M'→Mσ≡M'σ {σ = (ι ≺+ (y , v x'))} M[y/x]~M'[y/x'])) (≡→α (lemma≺+ι y#ƛx'M'))) (∼σ lemma∙ι))
+      K₂ , M'→K₂ , K₁∼K₂ = confl-α M[x'/x]~M' M[x'/x]→K₁
+      ƛx'M'→ƛx'K₂ = ctxƛ {x = x'} M'→K₂
+      x'#ƛxN = lemma→β# (lemmaM∼N# (∼σ (∼ƛ y#ƛxM y#ƛx'M' M[y/x]~M'[y/x'])) x' #ƛ≡) (ctxƛ M→N)
+      ƛx'K₂∼ƛxN = ∼τ (lemma∼λ {x = x'} (∼τ (∼σ K₁∼K₂) K₁∼N[x'/x])) (∼σ (corollary4-2' x'#ƛxN))
+  in ƛ x' K₂ , ƛx'M'→ƛx'K₂ , ∼σ ƛx'K₂∼ƛxN
 
 sn-α : ∀ {M N} → M ∼α N → sn M → sn N
 sn-α {_}{N} M~N (def hi) = def λ N→P → sn-α-aux N→P
