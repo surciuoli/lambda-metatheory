@@ -85,8 +85,16 @@ data ne : Λ → Set where
 
 -- start of auxiliary lemmas (overhead) --
 
+subst-compat₁ : ∀ {M N σ} → M ⟶ N → M ∙ σ ⟶² N ∙ σ
+
 var-irred : ∀ {x M} → (v x) ⟶ M → ⊥ 
 var-irred (ctxinj ())
+
+compat⟶²ƛ : ∀ {M N x} → M ⟶² N → ƛ x M ⟶² ƛ x N
+compat⟶²ƛ = {!!}
+
+compat⟶²α : ∀ {M M' N N'} → M ∼α M' → N ∼α N' → M ⟶² N → M' ⟶² N'
+compat⟶²α = {!!}
 
 confl-α : ∀ {M N P} → M ∼α N → M ⟶ P → ∃ λ Q → N ⟶ Q × P ∼α Q
 confl-α ∼v (ctxinj ())
@@ -107,13 +115,20 @@ confl-α (∼· {_}{_}{_}{N'} M~M' N~N') (ctx·l M→M'') with confl-α M~M' M�
 confl-α (∼· {_}{M'}{_}{_} M~M' N~N') (ctx·r N→N'') with confl-α N~N' N→N''
 ... | P , N'→P , N''~P = M' · P , ctx·r N'→P , ∼· M~M' N''~P
 confl-α (∼ƛ _ _ _) (ctxinj ())
-confl-α (∼ƛ x₁ x₂ xzM~yzM') (ctxƛ M→M'') = {!!}
+confl-α {ƛ x M}{ƛ x' M'}{ƛ .x N} (∼ƛ {_}{_}{_}{_}{y} y#ƛxM y#ƛx'M' M[y/x]~M'[y/x']) (ctxƛ M→N) = 
+  let K₁ , M[y/x]→K₁ , K₁∼N[y/x] = subst-compat₁ M→N
+      K₂ , M'[y/x']→K₂ , K₁∼K₂ = confl-α M[y/x]~M'[y/x'] M[y/x]→K₁
+      K₃ , ƛyM'[y/x']→K₃ , K₃∼ƛyK₁ = compat⟶²ƛ {x = y} (K₂ , M'[y/x']→K₂ , ∼σ K₁∼K₂)
+      ƛyM'[y/x']∼ƛx'M' = ∼σ (corollary4-2' y#ƛx'M')
+      ƛyK₁∼ƛxN = ∼τ (lemma∼λ {x = y} K₁∼N[y/x]) (∼σ (corollary4-2' (lemma→β# y#ƛxM (ctxƛ M→N))))
+      K₄ , ƛx'M'→K₄ , K₄∼ƛxN  = compat⟶²α ƛyM'[y/x']∼ƛx'M' ƛyK₁∼ƛxN (K₃ , ƛyM'[y/x']→K₃ , K₃∼ƛyK₁)
+  in K₄ , ƛx'M'→K₄ , ∼σ K₄∼ƛxN
 
 sn-α : ∀ {M N} → M ∼α N → sn M → sn N
 sn-α {_}{N} M~N (def hi) = def λ N→P → sn-α-aux N→P
   where sn-α-aux : ∀ {P} → N ⟶ P → sn P
-        sn-α-aux N→P with confl-α {!!} N→P
-        ... | _ , M→N , N~N' = {!!} -- sn-α N~N' (hi M→N)
+        sn-α-aux N→P with confl-α (∼σ M~N) N→P
+        ... | _ , M→Q , P~Q = sn-α (∼σ P~Q) (hi M→Q)
 
 ⟶²⇒⟶* : ∀ {M N} → M ⟶² N → M ⟶* N
 ⟶²⇒⟶* (_ , M→P , P~N) = trans (just (inj₁ M→P)) (just (inj₂ P~N))
@@ -125,7 +140,7 @@ sn-α {_}{N} M~N (def hi) = def λ N→P → sn-α-aux N→P
 
 -- Lemma 5
 
-subst-compat₁ : ∀ {M N σ} → M ⟶ N → M ∙ σ ⟶² N ∙ σ 
+--subst-compat₁ : ∀ {M N σ} → M ⟶ N → M ∙ σ ⟶² N ∙ σ 
 subst-compat₁ {ƛ y M · N}{_}{σ} (ctxinj ▹β) = M [ σ ∣ y := v z ] [ z := N ∙ σ ] , ctxinj ▹β , aux
   where z = χ (σ , ƛ y M)
         z#σ = χ-lemma2 σ (ƛ y M)
