@@ -32,7 +32,7 @@ infix 5 _⟶*_
 infix 5 _→sn_
 infix 30 _[_:=_]
 infix 30 _[_∣_:=_]
-infix 5 _→SN_
+infix 4 _→SN_,_
 
 _⟶_ : Λ → Λ → Set
 M ⟶ N = M →β N
@@ -60,28 +60,28 @@ data _→sn_ : Λ → Λ → Set where
 
 -- Inductive definition for strong normalizing terms
 
-data SN : Λ → Set
-data SNe : Λ → Set 
-data _→SN_ : Λ → Λ → Set
+data SN : ℕ → Λ → Set
+data SNe : ℕ → Λ → Set 
+data _→SN_,_ : Λ → ℕ → Λ → Set
 
-data _→SN_ where
-  β    : ∀ {M N x} → SN N → ƛ x M · N →SN M [ x := N ]
-  appl : ∀ {M M' N} → M →SN M' → M · N →SN M' · N   
+data _→SN_,_ where
+  β    : ∀ {M N x n} → SN n N → ƛ x M · N →SN (suc n) , M [ x := N ]
+  appl : ∀ {M M' N n} → M →SN n , M' → M · N →SN (suc n) , M' · N   
 
 data SNe where
-  v   : (x : V) → SNe (v x)
-  app : ∀ {M N} → SNe M → SN N → SNe (M · N)
+  v   : ∀ {x} → SNe 0 (v x)
+  app : ∀ {M N m n} → SNe m M → SN n N → SNe (suc (m ⊔ n)) (M · N)
 
 data SN where
-  sne   : ∀ {M} → SNe M → SN M 
-  abs  : ∀ {M x} → SN M → SN (ƛ x M) 
-  step : ∀ {M N} → M →SN N → SN N → SN M
+  sne   : ∀ {M m} → SNe m M → SN (suc m) M 
+  abs  : ∀ {M x m} → SN m M → SN (suc m) (ƛ x M) 
+  exp : ∀ {M N m n} → M →SN m , N → SN n N → SN (suc (m ⊔ n)) M
 
 -- Neutral form
 
 data ne : Λ → Set where
-  nev : (x : V) → ne (v x)
-  ne· : ∀ {r} → ne r → (s : Λ) → ne (r · s)
+  nv   : ∀ {x} → ne (v x)
+  napp : ∀ {M N} → ne M → ne (M · N)
 
 -- start of auxiliary lemmas (overhead) --
 
@@ -133,22 +133,24 @@ sn-α {_}{N} M~N (def hi) = def λ N→P → sn-α-aux N→P
 #⇂-preservedby-β : ∀ {M M' z σ} → M ⟶ M' → z #⇂ (σ , M) → z #⇂ (σ , M')
 #⇂-preservedby-β M→M' z#σM = λ x x*M → z#σM x (lemma→α* x*M M→M')
 
+lemma∼α∙ : ∀ {M σ y z N} → z #⇂ (σ , ƛ y M) → M [ σ ∣ y := v z ] [ z := N ∙ σ ] ∼α M [ y := N ] ∙ σ
+lemma∼α∙ {M} {σ} {y} {z} {N} z#σ =
+  begin
+    M [ σ ∣ y := v z ] [ z := N ∙ σ ]
+    ∼⟨ corollary1SubstLemma z#σ ⟩
+    M [ σ ∣ y := N ∙ σ ]
+    ≈⟨ corollary1Prop7 {M}{N}{σ}{y} ⟩
+    M [ y := N ] ∙ σ
+  ∎
+              
 -- end of auxiliary lemmas (overhead) --
 
 -- Lemma 5
 
 --subst-compat₁ : ∀ {M N σ} → M ⟶ N → M ∙ σ ⟶² N ∙ σ 
-subst-compat₁ {ƛ y M · N}{_}{σ} (ctxinj ▹β) = M [ σ ∣ y := v z ] [ z := N ∙ σ ] , ctxinj ▹β , aux
+subst-compat₁ {ƛ y M · N}{_}{σ} (ctxinj ▹β) = M [ σ ∣ y := v z ] [ z := N ∙ σ ] , ctxinj ▹β , lemma∼α∙ z#σ
   where z = χ (σ , ƛ y M)
         z#σ = χ-lemma2 σ (ƛ y M)
-        aux : M [ σ ∣ y := v z ] [ z := N ∙ σ ] ∼α M [ y := N ] ∙ σ
-        aux = begin
-                M [ σ ∣ y := v z ] [ z := N ∙ σ ]
-                ∼⟨ corollary1SubstLemma z#σ ⟩
-                M [ σ ∣ y := N ∙ σ ]
-                ≈⟨ corollary1Prop7 {M}{N}{σ}{y} ⟩
-                M [ y := N ] ∙ σ
-              ∎
 subst-compat₁ {v _ · _} (ctxinj ())
 subst-compat₁ {(_ · _) · _} (ctxinj ())
 subst-compat₁ {v _} (ctxinj ())
@@ -182,8 +184,8 @@ multistep (trans M→*N N→*P) snM = multistep N→*P (multistep M→*N snM)
 
 -- Lemma 9
 
-lemma-sn-v : ∀ (x : V) → sn (v x)
-lemma-sn-v x = def λ x→M → ⊥-elim (var-irred x→M) 
+lemma-sn-v : ∀ {x} → sn (v x)
+lemma-sn-v = def λ x→M → ⊥-elim (var-irred x→M) 
 
 lemma-sn-ƛ : ∀ {x M} → sn M → sn (ƛ x M)
 lemma-sn-ƛ snM = def λ ƛxM→P → lemma-sn-ƛ-aux snM ƛxM→P 
@@ -223,10 +225,10 @@ wkh-exp snN snM[N/x] = wkh-exp-α snN snM[N/x] ∼ρ
 -- Lemma 11
 
 closure→Ne : ∀ {R R'} → ne R → R ⟶ R' → ne R'
-closure→Ne (nev x) (ctxinj ())
-closure→Ne (ne· () N) (ctxinj ▹β)
-closure→Ne (ne· R∈ne N) (ctx·l R→P) = ne· (closure→Ne R∈ne R→P) N
-closure→Ne (ne· R∈ne N) (ctx·r {_}{_}{P} N→P) = ne· R∈ne P
+closure→Ne nv (ctxinj ())
+closure→Ne (napp ()) (ctxinj ▹β)
+closure→Ne (napp R∈ne) (ctx·l R→P) = napp (closure→Ne R∈ne R→P)
+closure→Ne (napp R∈ne) (ctx·r {_}{_}{P} N→P) = napp R∈ne
 
 closure·Ne : ∀ {R N} → ne R → sn R → sn N → sn (R · N)
 
@@ -272,25 +274,25 @@ backward→sn {M · N} {M' · .N} (appl M→M') M'N∈sn = let snM' , snN = inv-
                                                    in backward→sn-aux (backward→sn M→M' snM') snN M→M' M'N∈sn
 -- Lemma 14
 
-lemma-ne : ∀ {M} → SNe M → ne M
-lemma-ne (v x) = nev x
-lemma-ne (app {_} {N} M∈ne _) = ne· (lemma-ne M∈ne) N
+lemma-ne : ∀ {M n} → SNe n M → ne M
+lemma-ne v = nv
+lemma-ne (app M∈ne _) = napp (lemma-ne M∈ne)
 
 -- Theorem 1
 
-sound-SN  : ∀ {M} → SN M → sn M
+sound-SN  : ∀ {M n} → SN n M → sn M
 
-sound-SNe : ∀ {M} → SNe M → sn M
+sound-SNe : ∀ {M n} → SNe n M → sn M
 
-sound→SN  : ∀ {M N} → M →SN N → M →sn N
+sound→SN  : ∀ {M N n} → M →SN n , N → M →sn N
 
 -- sound-SN : ∀ {M} → SN M → sn M
 sound-SN (sne x) = sound-SNe x
 sound-SN (abs x) = lemma-sn-ƛ (sound-SN x)
-sound-SN (step M→N N∈Sn) = backward→sn (sound→SN M→N) (sound-SN N∈Sn)
+sound-SN (exp M→N N∈Sn) = backward→sn (sound→SN M→N) (sound-SN N∈Sn)
 
 -- sound-SNe : ∀ {M} → SNe M → sn M
-sound-SNe (v x) = lemma-sn-v x
+sound-SNe v = lemma-sn-v
 sound-SNe (app M∈SNe N∈Sn) = closure·Ne (lemma-ne M∈SNe) (sound-SNe M∈SNe) (sound-SN N∈Sn)
 
 -- sound→SN : ∀ {M N} → M →SN N → M →sn N
