@@ -26,10 +26,17 @@ data _ₜ<_ : Type → Type → Set where
   ₜ<l : ∀ {α β} → α ₜ< (α ⇒ β)
   ₜ<r : ∀ {α β} → β ₜ< (α ⇒ β)
 
+wfₜ< : Well-founded _ₜ<_
+wfₜ< τ = acc λ y ()
+wfₜ< (α ⇒ B) = acc wfₜ<-aux
+  where wfₜ<-aux : (γ : Type) → γ ₜ< (α ⇒ B) → Acc _ₜ<_ γ
+        wfₜ<-aux .α ₜ<l = wfₜ< α
+        wfₜ<-aux .B ₜ<r = wfₜ< B
+        
 open Transitive-closure _ₜ<_ renaming (_<⁺_ to _ₜ<⁺_)
 
 wfₜ<⁺ : Well-founded _ₜ<⁺_ 
-wfₜ<⁺ = {!!}
+wfₜ<⁺ = well-founded wfₜ<
 
 open Lexicographic _ₜ<⁺_ (λ _ m n → m <′ n) renaming (_<_ to _ₜ,ₙ<_ ; well-founded to wfΣ)
 
