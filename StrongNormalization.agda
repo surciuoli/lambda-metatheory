@@ -21,6 +21,8 @@ open import Data.Empty
 open import Relation.Nullary
 open import Induction.Nat
 open import Data.Nat.Properties
+open import Relation.Binary hiding (_⇒_)
+open import Algebra.Structures
 
 data _ₜ<_ : Type → Type → Set where
   ₜ<l : ∀ {α β} → α ₜ< (α ⇒ β)
@@ -43,26 +45,29 @@ open Lexicographic _ₜ<⁺_ (λ _ m n → m <′ n) renaming (_<_ to _ₜ,ₙ<_
 wfₜ,ₙ< : Well-founded _ₜ,ₙ<_
 wfₜ,ₙ< = wfΣ wfₜ<⁺ <-well-founded
 
-IsVar : Λ → Set
-IsVar M = ∃ λ y → M ≡ v y
-
 SN′ : Λ → Set 
 SN′ M = ∃ λ n → SN n M
+
+SNe′ : Λ → Set 
+SNe′ M = ∃ λ n → SNe n M
 
 _→SN′_ : Λ → Λ → Set 
 M →SN′ N = ∃ λ n → M →SN n , N
 
+data IsVar : Λ → Set where
+  isv : ∀ {x} → IsVar (v x)
+  
 Ren : Σ → Type → Cxt → Set
 Ren σ α Γ = ∀ {x} → IsVar (σ x) ⊎ SN′ (σ x) × (Γ ⊢ v x ∶ α)
 
 lemma-Renι : ∀ {x n α Γ M} → SN n M → Γ ⊢ M ∶ α → Ren (ι ≺+ (x , M)) α (Γ ‚ x ∶ α)
 lemma-Renι {x} M⇓ M:α {y} with x ≟ y 
 lemma-Renι {x} {n} M⇓ M:α .{x} | yes refl = inj₂ ((n , M⇓) , ⊢v (here refl))
-... | no _ = inj₁ (y , refl)
+... | no _ = inj₁ isv 
 
 lemma-Ren≺+ : ∀ {x z α Γ M σ β n} → Ren σ β Γ → SN n M → Ren (σ ≺+ (x , v z)) β (Γ ‚ x ∶ α)
 lemma-Ren≺+ {x} {z} Πσ M⇓ {y} with x ≟ y
-lemma-Ren≺+ {x} {z} Πσ M⇓ .{x} | yes refl = inj₁ (z , refl)
+lemma-Ren≺+ {x} {z} Πσ M⇓ .{x} | yes refl = inj₁ isv 
 ... | no x≢y with Πσ {y}
 ... | inj₁ isvar = inj₁ isvar
 ... | inj₂ (σy⇓ , Γ⊢y:β) = inj₂ (σy⇓ , lemmaWeakening⊢# (#v (sym≢ x≢y)) Γ⊢y:β)
@@ -74,8 +79,19 @@ hd : ∀ {M n} → SNe n M → V
 hd (v {x}) = x
 hd (app M⇓ _) = hd M⇓ 
 
-SNe-preservedby-σ : ∀ {σ M n k} → (M⇓ : SNe n M) → IsVar (σ (hd M⇓)) → SN k (M ∙ σ) → SNe k (M ∙ σ)
-SNe-preservedby-σ _ isvar Mσ⇓ = {!!}
+SNe-reduces⇒⊥ : ∀ {σ M N n k} → (M⇓ : SNe n M) → IsVar (σ (hd M⇓)) → M ∙ σ →SN k , N → ⊥
+SNe-reduces⇒⊥ {σ} (v {x}) isvar Mσ→N with σ x
+SNe-reduces⇒⊥ {σ} (v {x}) (isv {y}) () | v {.y}
+SNe-reduces⇒⊥ {σ} (app (v {x}) _) isvar xPσ→N with σ x
+SNe-reduces⇒⊥ {σ} (app (v {x}) _) (isv {y}) (appl yPσ→N) | v {.y} = SNe-reduces⇒⊥ (v {x}) (isv {y}) yPσ→N
+SNe-reduces⇒⊥ (app M⇓ _) isvar (appl Mσ→Nσ) = SNe-reduces⇒⊥ M⇓ isvar Mσ→Nσ
+
+SNe-preservedby-σ : ∀ {σ M n k} → (M⇓ : SNe n M) → IsVar (σ (hd M⇓)) → SN k (M ∙ σ) → SNe (pred k) (M ∙ σ)
+SNe-preservedby-σ {σ} (v {x}) isvar Mσ⇓ with σ x
+SNe-preservedby-σ {σ} (v {x}) (isv {y}) (sne (v {.y})) | (v {.y}) = v {y}
+SNe-preservedby-σ {σ} (v {x}) (isv {y}) (exp () _) | (v {.y})
+SNe-preservedby-σ {σ} (app P⇓ Q⇓) isvar (sne (app Pσ⇓ Qσ⇓)) = app Pσ⇓ Qσ⇓
+SNe-preservedby-σ {σ} M⇓ isvar (exp M→N _) = ⊥-elim (SNe-reduces⇒⊥ M⇓ isvar M→N)
 
 lemma-≡Γx : ∀ {α β Γ x} → Γ ⊢ v x ∶ α → Γ ⊢ v x ∶ β → α ≡ β
 lemma-≡Γx (⊢v x∈Γ₁) (⊢v x∈Γ₂) = lemma∈!⟨⟩ x∈Γ₁ x∈Γ₂
@@ -101,8 +117,11 @@ lemmaσ⇂· σ⇂PQ = (λ x*P → σ⇂PQ (*·l x*P)) , (λ x*Q → σ⇂PQ (*�
 m<′m⊔n+1 : ∀ m n → m <′ suc (m ⊔ n)
 m<′m⊔n+1 m n = s≤′s (≤⇒≤′ (m≤m⊔n m n))
 
+⊔-comm = IsCommutativeMonoid.comm (IsCommutativeSemiringWithoutOne.+-isCommutativeMonoid ⊔-⊓-0-isCommutativeSemiringWithoutOne)
+
 m<′n⊔m+1 : ∀ m n → m <′ suc (n ⊔ m)
-m<′n⊔m+1 = {!!}
+m<′n⊔m+1 m n with n ⊔ m | ⊔-comm n m
+m<′n⊔m+1 m n | .(m ⊔ n) | refl = m<′m⊔n+1 m n
 
 SN-lemma : ∀ {M Γ α β n}
          → Acc _ₜ,ₙ<_ (β , n)
@@ -149,7 +168,7 @@ SN-lemma→ {L · J} {L' · .J} {σ} {Γ} {Δ} {_} {B} {suc n} (acc hi) (appl L�
 SN-lemmaNe .{v x} {Γ} {_} {B} _ (v {x}) _ = thesis₁ , λ {_} {k} N⇓ _ _ → suc (suc k) , sne (app v N⇓)
   where thesis₁ : ∀ {σ} {Δ} → σ ∶ Γ ⇀ Δ ⇂ (v x) → Ren σ B Γ → SN′ (v x ∙ σ)
         thesis₁ {σ} _ Πσ with σ x | Πσ {x} 
-        ... | .(v y) | inj₁ (y , refl) = 1 , sne v
+        ... | .(v y) | inj₁ (isv {y}) = 1 , sne v
         ... | _ | inj₂ (σx⇓ , _) = σx⇓ 
 SN-lemmaNe {P · Q} {Γ} {_} {B} (acc hi) (app {m = m} {n = n} P⇓ Q⇓) (⊢· {γ} {ε} P:γ→ε Q:γ) =
   thesis₁ , λ {_} {k} N⇓ _ _ → suc (suc ((suc (m ⊔ n)) ⊔ k))  , sne (app (app P⇓ Q⇓) N⇓)
@@ -168,7 +187,7 @@ SN-lemmaNe {P · Q} {Γ} {_} {B} (acc hi) (app {m = m} {n = n} P⇓ Q⇓) (⊢·
               Pσ:γ→ε = lemma⊢σM P:γ→ε σ⇂P                                                                            
               Qσ:γ : Δ ⊢ Q ∙ σ ∶ γ 
               Qσ:γ = lemma⊢σM Q:γ σ⇂Q
-              PQσ⇓₁ = λ isVar → suc (suc (p ⊔ q)) , sne (app (SNe-preservedby-σ {σ} {P} P⇓ isVar Pσ⇓) Qσ⇓)
+              PQσ⇓₁ = λ isVar → suc (suc (pred p ⊔ q)) , sne (app (SNe-preservedby-σ {σ} {P} P⇓ isVar Pσ⇓) Qσ⇓)
               PQσ⇓₂ = λ { (_ , hdP:β) →
                 let γ<β : γ ₜ<⁺ B
                     γ<β = lemma-ₜ< P⇓ hdP:β P:γ→ε
