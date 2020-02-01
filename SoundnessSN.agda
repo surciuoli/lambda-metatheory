@@ -32,7 +32,7 @@ infix 5 _⟶*_
 infix 5 _→sn_
 infix 30 _[_:=_]
 infix 30 _[_∣_:=_]
-infix 4 _→SN_,_
+infix 4 _→SN_
 
 _⟶_ : Λ → Λ → Set
 M ⟶ N = M →β N
@@ -60,22 +60,22 @@ data _→sn_ : Λ → Λ → Set where
 
 -- Inductive definition for strong normalizing terms
 
-data SN : ℕ → Λ → Set
-data SNe : ℕ → Λ → Set 
-data _→SN_,_ : Λ → ℕ → Λ → Set
+data SN : Λ → Set
+data SNe : Λ → Set 
+data _→SN_ : Λ → Λ → Set
 
-data _→SN_,_ where
-  β    : ∀ {M N x n} → SN n N → ƛ x M · N →SN (suc n) , M [ x := N ]
-  appl : ∀ {M M' N n} → M →SN n , M' → M · N →SN (suc n) , M' · N   
+data _→SN_ where
+  β    : ∀ {M N x} → SN N → ƛ x M · N →SN M [ x := N ]
+  appl : ∀ {M M' N} → M →SN M' → M · N →SN M' · N   
 
 data SNe where
-  v   : ∀ {x} → SNe 0 (v x)
-  app : ∀ {M N m n} → SNe m M → SN n N → SNe (suc (m ⊔ n)) (M · N)
+  v   : ∀ {x} → SNe (v x)
+  app : ∀ {M N} → SNe M → SN N → SNe (M · N)
 
 data SN where
-  sne   : ∀ {M m} → SNe m M → SN (suc m) M 
-  abs  : ∀ {M x m} → SN m M → SN (suc m) (ƛ x M) 
-  exp : ∀ {M N m n} → M →SN m , N → SN n N → SN (suc (m ⊔ n)) M
+  sne   : ∀ {M} → SNe M → SN M 
+  abs  : ∀ {M x} → SN M → SN (ƛ x M) 
+  exp : ∀ {M N} → M →SN N → SN N → SN M
 
 -- Neutral form
 
@@ -274,17 +274,17 @@ backward→sn {M · N} {M' · .N} (appl M→M') M'N∈sn = let snM' , snN = inv-
                                                    in backward→sn-aux (backward→sn M→M' snM') snN M→M' M'N∈sn
 -- Lemma 14
 
-lemma-ne : ∀ {M n} → SNe n M → ne M
+lemma-ne : ∀ {M} → SNe M → ne M
 lemma-ne v = nv
 lemma-ne (app M∈ne _) = napp (lemma-ne M∈ne)
 
 -- Theorem 1
 
-sound-SN  : ∀ {M n} → SN n M → sn M
+sound-SN  : ∀ {M} → SN M → sn M
 
-sound-SNe : ∀ {M n} → SNe n M → sn M
+sound-SNe : ∀ {M} → SNe M → sn M
 
-sound→SN  : ∀ {M N n} → M →SN n , N → M →sn N
+sound→SN  : ∀ {M N} → M →SN N → M →sn N
 
 -- sound-SN : ∀ {M} → SN M → sn M
 sound-SN (sne x) = sound-SNe x
