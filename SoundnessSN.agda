@@ -93,18 +93,25 @@ var-irred (ctxinj ())
 ≡→α : ∀ {M N} -> M ≡ N -> M ∼α N
 ≡→α {M} M≡N = subst₂ _∼α_ refl M≡N (∼ρ {M})
 
+β-equiv : ∀ {M M' N N' x y} → ƛ x M · N ∼α ƛ y M' · N' → M [ x := N ] ∼α M' [ y := N' ]
+β-equiv (∼· {N = N} {N' = N'} (∼ƛ {M} {M'} {x} {y} {z} z#ƛxM z#ƛyM' xzM~yzM') N~N') =
+  begin
+    M [ x := N ]
+    ≈⟨ lemma≺+ z#ƛxM ⟩
+    M [ x := v z ] [ z := N ]
+    ∼⟨ lemma-subst xzM~yzM' (lemma≺+∼α⇂ {z} lemmaι∼α⇂ N~N') ⟩ 
+    M' [ y := v z ] [ z := N' ]
+    ≈⟨ sym (lemma≺+ z#ƛyM') ⟩
+    M' [ y := N' ]
+  ∎
+
+lemma-α-ren : ∀ {M N x y} → ƛ x M ∼α ƛ y N → M [ x := v y ] ∼α N
+lemma-α-ren (∼ƛ {_}{_}{_}{x'}{y} y#ƛxM y#ƛx'M' M[y/x]~M'[y/x']) =
+  subst₂ _∼α_ (sym (lemma≺+ y#ƛxM)) refl (∼τ (∼τ (≡→α (lemmaM∼M'→Mσ≡M'σ {σ = (ι ≺+ (y , v x'))} M[y/x]~M'[y/x'])) (≡→α (lemma≺+ι y#ƛx'M'))) (∼σ lemma∙ι))
+
 confl-α : ∀ {M N P} → M ∼α N → M ⟶ P → ∃ λ Q → N ⟶ Q × P ∼α Q
 confl-α ∼v (ctxinj ())
-confl-α {ƛ x M · N}{ƛ y M' · N'} (∼· (∼ƛ {.M}{.M'}{.x}{.y}{z} z#ƛxM z#ƛyM' xzM~yzM') N~N') (ctxinj ▹β) = M' [ y := N' ] , ctxinj ▹β , aux
-  where aux = begin
-                M [ x := N ]
-                ≈⟨ lemma≺+ z#ƛxM ⟩
-                M [ x := v z ] [ z := N ]
-                ∼⟨ lemma-subst xzM~yzM' (lemma≺+∼α⇂ {z} lemmaι∼α⇂ N~N') ⟩ 
-                M' [ y := v z ] [ z := N' ]
-                ≈⟨ sym (lemma≺+ z#ƛyM') ⟩
-                M' [ y := N' ]
-              ∎ 
+confl-α {ƛ x M · N}{ƛ y M' · N'} ƛxMN∼ƛyM'N' (ctxinj ▹β) = M' [ y := N' ] , ctxinj ▹β , β-equiv ƛxMN∼ƛyM'N'
 confl-α (∼· ∼v _) (ctxinj ())
 confl-α (∼· (∼· _ _) _) (ctxinj ())
 confl-α (∼· {_}{_}{_}{N'} M~M' N~N') (ctx·l M→M'') with confl-α M~M' M→M''
@@ -113,11 +120,12 @@ confl-α (∼· {_}{M'}{_}{_} M~M' N~N') (ctx·r N→N'') with confl-α N~N' N�
 ... | P , N'→P , N''~P = M' · P , ctx·r N'→P , ∼· M~M' N''~P
 confl-α (∼ƛ _ _ _) (ctxinj ())
 confl-α {ƛ x M}{ƛ x' M'}{ƛ .x N} (∼ƛ {_}{_}{_}{.x'}{y} y#ƛxM y#ƛx'M' M[y/x]~M'[y/x']) (ctxƛ M→N) = 
-  let K₁ , M[x'/x]→K₁ , K₁∼N[x'/x] = subst-compat₁ {σ = ι ≺+ (x , v x')} M→N
-      M[x'/x]~M' = subst₂ _∼α_ (sym (lemma≺+ y#ƛxM)) refl (∼τ (∼τ (≡→α (lemmaM∼M'→Mσ≡M'σ {σ = (ι ≺+ (y , v x'))} M[y/x]~M'[y/x'])) (≡→α (lemma≺+ι y#ƛx'M'))) (∼σ lemma∙ι))
+  let ƛxM~ƛx'M' = (∼ƛ y#ƛxM y#ƛx'M' M[y/x]~M'[y/x'])
+      K₁ , M[x'/x]→K₁ , K₁∼N[x'/x] = subst-compat₁ {σ = ι ≺+ (x , v x')} M→N
+      M[x'/x]~M' = lemma-α-ren ƛxM~ƛx'M'
       K₂ , M'→K₂ , K₁∼K₂ = confl-α M[x'/x]~M' M[x'/x]→K₁
       ƛx'M'→ƛx'K₂ = ctxƛ {x = x'} M'→K₂
-      x'#ƛxN = lemma→β# (lemmaM∼N# (∼σ (∼ƛ y#ƛxM y#ƛx'M' M[y/x]~M'[y/x'])) x' #ƛ≡) (ctxƛ M→N)
+      x'#ƛxN = lemma→β# (lemmaM∼N# (∼σ ƛxM~ƛx'M') x' #ƛ≡) (ctxƛ M→N)
       ƛx'K₂∼ƛxN = ∼τ (lemma∼λ {x = x'} (∼τ (∼σ K₁∼K₂) K₁∼N[x'/x])) (∼σ (corollary4-2' x'#ƛxN))
   in ƛ x' K₂ , ƛx'M'→ƛx'K₂ , ∼σ ƛx'K₂∼ƛxN
 

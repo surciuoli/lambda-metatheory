@@ -24,6 +24,8 @@ open import Data.Nat.Properties
 open import Relation.Binary hiding (_⇒_)
 open import Algebra.Structures
 
+-- Well-foundness proofs
+
 data _ₜ<_ : Type → Type → Set where
   ₜ<l : ∀ {α β} → α ₜ< (α ⇒ β)
   ₜ<r : ∀ {α β} → β ₜ< (α ⇒ β)
@@ -45,26 +47,16 @@ open Lexicographic _ₜ<⁺_ (λ _ m n → m <′ n) renaming (_<_ to _ₜ,ₙ<_
 wfₜ,ₙ< : Well-founded _ₜ,ₙ<_
 wfₜ,ₙ< = wfΣ wfₜ<⁺ <-well-founded
 
+-- Definitions
+
 data IsVar : Λ → Set where
   isv : ∀ {x} → IsVar (v x)
-  
-Ren : Σ → Type → Cxt → Set
-Ren σ α Γ = ∀ {x} → IsVar (σ x) ⊎ SN (σ x) × (Γ ⊢ v x ∶ α)
 
-lemma-Renι : ∀ {x α Γ M} → SN M → Γ ⊢ M ∶ α → Ren (ι ≺+ (x , M)) α (Γ ‚ x ∶ α)
-lemma-Renι {x} M⇓ M:α {y} with x ≟ y 
-lemma-Renι {x} M⇓ M:α .{x} | yes refl = inj₂ (M⇓ , ⊢v (here refl))
-... | no _ = inj₁ isv 
+Ren : Σ → Set
+Ren σ = ∀ {x} → IsVar (σ x)
 
-lemma-Ren≺+ : ∀ {x z α Γ M σ β} → Ren σ β Γ → SN M → Ren (σ ≺+ (x , v z)) β (Γ ‚ x ∶ α)
-lemma-Ren≺+ {x} {z} Πσ M⇓ {y} with x ≟ y
-lemma-Ren≺+ {x} {z} Πσ M⇓ .{x} | yes refl = inj₁ isv 
-... | no x≢y with Πσ {y}
-... | inj₁ isvar = inj₁ isvar
-... | inj₂ (σy⇓ , Γ⊢y:β) = inj₂ (σy⇓ , lemmaWeakening⊢# (#v (sym≢ x≢y)) Γ⊢y:β)
-
-SN-lemma-α : ∀ {M N} → SN M → M ∼α N → SN N
-SN-lemma-α = {!!}
+Unary : Σ → Type → Cxt → Set
+Unary σ α Γ = ∀ {x} → IsVar (σ x) ⊎ SN (σ x) × (Γ ⊢ v x ∶ α)
 
 hd : ∀ {M} → SNe M → V
 hd (v {x}) = x
@@ -83,6 +75,77 @@ heightNe (app M⇓ N⇓) = suc (heightNe M⇓ ⊔ height N⇓)
 height (abs M⇓) = suc (height M⇓)
 height (sne M⇓) = suc (heightNe M⇓)
 height (exp M→N N⇓) = suc (height→ M→N ⊔ height N⇓)
+
+-- Auxiliary lemmas
+
+m<′m⊔n+1 : ∀ m n → m <′ suc (m ⊔ n)
+m<′m⊔n+1 m n = s≤′s (≤⇒≤′ (m≤m⊔n m n))
+
+⊔-comm = IsCommutativeMonoid.comm (IsCommutativeSemiringWithoutOne.+-isCommutativeMonoid ⊔-⊓-0-isCommutativeSemiringWithoutOne)
+
+m<′n⊔m+1 : ∀ m n → m <′ suc (n ⊔ m)
+m<′n⊔m+1 m n with n ⊔ m | ⊔-comm n m
+m<′n⊔m+1 m n | .(m ⊔ n) | refl = m<′m⊔n+1 m n
+
+SN-preservedby-π : ∀ {M π} → Ren π → SN M → SN (M ∙ π)
+SN-preservedby-π = {!!}
+
+heightMπ≡M : ∀ {M π} → Ren π → (Mπ⇓ : SN (M ∙ π)) → (M⇓ : SN M) → height Mπ⇓ ≡ height M⇓
+heightMπ≡M = {!!}
+
+Ren→compat : ∀ {M N π} → Ren π → M →SN N → ∃ λ P → M ∙ π →SN P × P ∼α N ∙ π
+Ren→compat = {!!}
+
+Ren[x=y] : ∀ x y → Ren (ι ≺+ (x , v y))
+Ren[x=y] x y {w} with x ≟ w
+Ren[x=y] x y {.x} | yes refl = isv
+... | no _ = isv
+
+lemma-Unaryι : ∀ {x α Γ M} → SN M → Γ ⊢ M ∶ α → Unary (ι ≺+ (x , M)) α (Γ ‚ x ∶ α)
+lemma-Unaryι {x} M⇓ M:α {y} with x ≟ y 
+lemma-Unaryι {x} M⇓ M:α .{x} | yes refl = inj₂ (M⇓ , ⊢v (here refl))
+... | no _ = inj₁ isv 
+
+lemma-Unary≺+ : ∀ {x z α Γ M σ β} → Unary σ β Γ → SN M → Unary (σ ≺+ (x , v z)) β (Γ ‚ x ∶ α)
+lemma-Unary≺+ {x} {z} Πσ M⇓ {y} with x ≟ y
+lemma-Unary≺+ {x} {z} Πσ M⇓ .{x} | yes refl = inj₁ isv 
+... | no x≢y with Πσ {y}
+... | inj₁ isvar = inj₁ isvar
+... | inj₂ (σy⇓ , Γ⊢y:β) = inj₂ (σy⇓ , lemmaWeakening⊢# (#v (sym≢ x≢y)) Γ⊢y:β)
+
+SN-lemma-αNe : ∀ {M N} → (M⇓ : SNe M) → Acc _<′_ (heightNe M⇓) → M ∼α N → SNe N
+SN-lemma-α : ∀ {M N} → (M⇓ : SN M) → Acc _<′_ (height M⇓) → M ∼α N → SN N
+SN-confl : ∀ {M N P} → M ∼α N → (N→P : N →SN P) → Acc _<′_ (height→ N→P) → ∃ λ Q → M →SN Q × Q ∼α P
+
+SN-confl {ƛ x M · N} {ƛ y M' · N'} .{M' [ y := N' ]} (∼· (∼ƛ z#M z#M' M∼M') N~N') (β N'⇓) (acc hi) =
+  M [ x := N ] , β (SN-lemma-α N'⇓ (hi (height N'⇓) ≤′-refl) (∼σ N~N')), β-equiv (∼· (∼ƛ z#M z#M' M∼M') N~N')
+SN-confl {M · N} {M' · N'} {M'' · .N'} (∼· M~M' N~N') (appl M'→M'') (acc hi) =
+  let P , M→P , P~M'' = SN-confl M~M' M'→M'' (hi (height→ M'→M'') ≤′-refl)
+  in P · N , appl M→P , ∼· P~M'' N~N' 
+
+SN-lemma-αNe v _ ∼v = v
+SN-lemma-αNe (app M⇓ N⇓) (acc hi) (∼· M~M' N~N') =
+  let m , n = heightNe M⇓ , height N⇓
+      M'⇓ , N'⇓ = SN-lemma-αNe M⇓ (hi m (m<′m⊔n+1 m n)) M~M' , SN-lemma-α N⇓ (hi n (m<′n⊔m+1 n m)) N~N'
+  in app M'⇓ N'⇓
+
+SN-lemma-α (sne M⇓) (acc hi) M~N = sne (SN-lemma-αNe M⇓ (hi (heightNe M⇓) ≤′-refl) M~N)
+SN-lemma-α {ƛ x M} {ƛ y N} (abs M⇓) (acc hi) (∼ƛ z#M z#N M∼N) = abs (SN-lemma-α Mπ⇓ (hi (height Mπ⇓) (m<n (heightMπ≡M Renπ Mπ⇓ M⇓) ≤′-refl)) Mπ~N)
+  where π : Σ
+        π = ι ≺+ (x , v y)
+        Renπ : Ren π
+        Renπ = Ren[x=y] x y
+        Mπ⇓ : SN (M ∙ π) 
+        Mπ⇓ = SN-preservedby-π Renπ M⇓
+        Mπ~N : M ∙ π ∼α N
+        Mπ~N = lemma-α-ren (∼ƛ z#M z#N M∼N)
+        m<n : ∀ {m n p} → m ≡ n → n <′ p → m <′ p
+        m<n refl n<p = n<p
+SN-lemma-α (exp M→N N⇓) (acc hi) M~P =
+  let k , l =  height→ M→N , height N⇓
+      _ , P→Q , Q~N = SN-confl (∼σ M~P) M→N (hi k (m<′m⊔n+1 k l))
+      Q⇓ = SN-lemma-α N⇓ (hi l (m<′n⊔m+1 l k)) (∼σ Q~N) 
+  in exp P→Q Q⇓ 
 
 SNe-reduces⇒⊥ : ∀ {σ M N} → (M⇓ : SNe M) → IsVar (σ (hd M⇓)) → M ∙ σ →SN N → ⊥
 SNe-reduces⇒⊥ {σ} (v {x}) isvar Mσ→N with σ x
@@ -119,21 +182,14 @@ lemma-ₜ< {α} {γ} .{α ⇒ γ} M⇓ hdM:β M:α→γ | inj₂ refl = [ ₜ<l 
 lemmaσ⇂· : ∀ {σ Γ Δ P Q} → σ ∶ Γ ⇀ Δ ⇂ P · Q → (σ ∶ Γ ⇀ Δ ⇂ P) × (σ ∶ Γ ⇀ Δ ⇂ Q)
 lemmaσ⇂· σ⇂PQ = (λ x*P → σ⇂PQ (*·l x*P)) , (λ x*Q → σ⇂PQ (*·r x*Q))
 
-m<′m⊔n+1 : ∀ m n → m <′ suc (m ⊔ n)
-m<′m⊔n+1 m n = s≤′s (≤⇒≤′ (m≤m⊔n m n))
-
-⊔-comm = IsCommutativeMonoid.comm (IsCommutativeSemiringWithoutOne.+-isCommutativeMonoid ⊔-⊓-0-isCommutativeSemiringWithoutOne)
-
-m<′n⊔m+1 : ∀ m n → m <′ suc (n ⊔ m)
-m<′n⊔m+1 m n with n ⊔ m | ⊔-comm n m
-m<′n⊔m+1 m n | .(m ⊔ n) | refl = m<′m⊔n+1 m n
+-- Main lemma
 
 SN-lemma : ∀ {M Γ α β n}
          → Acc _ₜ,ₙ<_ (β , n)
          → (M⇓ : SN M)
          → n ≡ height M⇓ 
          → Γ ⊢ M ∶ α
-         → (∀ {σ Δ} → σ ∶ Γ ⇀ Δ ⇂ M → Ren σ β Γ → SN (M ∙ σ))
+         → (∀ {σ Δ} → σ ∶ Γ ⇀ Δ ⇂ M → Unary σ β Γ → SN (M ∙ σ))
            × (∀ {N} → SN N → Γ ⊢ N ∶ β → (∃ λ γ → α ≡ β ⇒ γ) → SN (M · N)) 
 
 SN-lemma→ : ∀ {L K σ Γ Δ α β n}
@@ -142,7 +198,7 @@ SN-lemma→ : ∀ {L K σ Γ Δ α β n}
           → n ≡ height→ M→N
           → Γ ⊢ L ∶ α
           → σ ∶ Γ ⇀ Δ ⇂ L
-          → Ren σ β Γ
+          → Unary σ β Γ
           → ∃ λ P → (L ∙ σ) →SN P × P ∼α K ∙ σ
 
 SN-lemmaNe : ∀ {M Γ α β n}
@@ -150,7 +206,7 @@ SN-lemmaNe : ∀ {M Γ α β n}
            → (M⇓ : SNe M)
            → n ≡ heightNe M⇓ 
            → Γ ⊢ M ∶ α
-           → (∀ {σ Δ} → σ ∶ Γ ⇀ Δ ⇂ M → Ren σ β Γ → SN (M ∙ σ))
+           → (∀ {σ Δ} → σ ∶ Γ ⇀ Δ ⇂ M → Unary σ β Γ → SN (M ∙ σ))
              × (∀ {N} → SN N → Γ ⊢ N ∶ β → (∃ λ γ → α ≡ β ⇒ γ) → SN (M · N))
 
 SN-lemma→ {ƛ x L · J} {_} {σ} {Γ} {Δ} {α} {B} .{suc (height J⇓)} (acc hi) (β J⇓) refl (⊢· _ J:γ) σ⇂ƛxLJ Πσ =
@@ -174,14 +230,14 @@ SN-lemma→ {L · J} {L' · .J} {σ} {Γ} {Δ} {_} {B} .{suc (height→ L→L')}
   in P · (J ∙ σ) , LJσ→PJσ , PJσ~L'Jσ
 
 SN-lemmaNe .{v x} {Γ} {_} {B} .{0} _ (v {x}) refl _  = thesis₁ , λ N⇓ _ _ → sne (app v N⇓)
-  where thesis₁ : ∀ {σ} {Δ} → σ ∶ Γ ⇀ Δ ⇂ (v x) → Ren σ B Γ → SN (v x ∙ σ)
+  where thesis₁ : ∀ {σ} {Δ} → σ ∶ Γ ⇀ Δ ⇂ (v x) → Unary σ B Γ → SN (v x ∙ σ)
         thesis₁ {σ} _ Πσ with σ x | Πσ {x} 
         ... | .(v y) | inj₁ (isv {y}) = sne v
         ... | _ | inj₂ (σx⇓ , _) = σx⇓ 
 SN-lemmaNe {P · Q} {Γ} {_} {B} .{suc (heightNe P⇓ ⊔ height Q⇓) } (acc hi) (app P⇓ Q⇓) refl (⊢· {γ} {ε} P:γ→ε Q:γ) =
   thesis₁ , λ N⇓ _ _ → sne (app (app P⇓ Q⇓) N⇓)
     where
-        thesis₁ : ∀ {σ Δ} → σ ∶ Γ ⇀ Δ ⇂ P · Q → Ren σ B Γ → SN (P · Q ∙ σ)
+        thesis₁ : ∀ {σ Δ} → σ ∶ Γ ⇀ Δ ⇂ P · Q → Unary σ B Γ → SN (P · Q ∙ σ)
         thesis₁ {σ} {Δ} σ⇂PQ Πσ =
           let m , n = heightNe P⇓ , height Q⇓
               σ⇂P : σ ∶ Γ ⇀ Δ ⇂ P
@@ -200,29 +256,27 @@ SN-lemmaNe {P · Q} {Γ} {_} {B} .{suc (heightNe P⇓ ⊔ height Q⇓) } (acc hi
               PQσ⇓₂ = λ { (_ , hdP:β) →
                 let γ<β : γ ₜ<⁺ B
                     γ<β = lemma-ₜ< P⇓ hdP:β P:γ→ε
-                    --accγ : Acc _ₜ<⁺_ γ
-                    --accγ = hiₜ γ γ<β
                 in proj₂ (SN-lemma (hi (γ , height Pσ⇓) (left γ<β)) Pσ⇓ refl Pσ:γ→ε) Qσ⇓ Qσ:γ (ε , refl) }
           in [ PQσ⇓₁ , PQσ⇓₂ ]′ (Πσ {hd P⇓})
                                   
 SN-lemma {β = B} .{n = suc (heightNe M⇓)} (acc hi) (sne M⇓) refl = SN-lemmaNe (hi (B , heightNe M⇓) (right ≤′-refl)) M⇓ refl
 SN-lemma {ƛ x P} {Γ} {δ ⇒ ε} {B} .{suc (height P⇓)} (acc hi) (abs P⇓) refl (⊢ƛ P:ε) = thesis₁ , thesis₂ (⊢ƛ P:ε)
-  where thesis₁ : ∀ {σ Δ} → σ ∶ Γ ⇀ Δ ⇂ ƛ x P → Ren σ B Γ → SN (ƛ x P ∙ σ)
+  where thesis₁ : ∀ {σ Δ} → σ ∶ Γ ⇀ Δ ⇂ ƛ x P → Unary σ B Γ → SN (ƛ x P ∙ σ)
         thesis₁ {σ} {Δ} σ⇂ƛxP Πσ =
           let z : V
               z = χ (σ , ƛ x P)
               σ⇂P : (σ ≺+ (x , v z)) ∶ (Γ ‚ x ∶ δ) ⇀ (Δ ‚ z ∶ δ)  ⇂ P
               σ⇂P = lemmaaux⇀ (χ-lemma2 σ (ƛ x P)) σ⇂ƛxP
-              Πσ,x=z : Ren (σ ≺+ (x , v z)) B (Γ ‚ x ∶ δ)
-              Πσ,x=z = lemma-Ren≺+ Πσ P⇓
+              Πσ,x=z : Unary (σ ≺+ (x , v z)) B (Γ ‚ x ∶ δ)
+              Πσ,x=z = lemma-Unary≺+ Πσ P⇓
               Pσ,x=z⇓ = proj₁ (SN-lemma (hi (B , height P⇓) (right ≤′-refl)) P⇓ refl P:ε) σ⇂P Πσ,x=z
           in abs Pσ,x=z⇓
         thesis₂ : ∀ {N δ ε} → Γ ⊢ ƛ x P ∶ δ ⇒ ε → SN N → Γ ⊢ N ∶ B → (∃ λ γ → δ ⇒ ε ≡ B ⇒ γ) → SN (ƛ x P · N)
         thesis₂ {N} {.B} {.γ} (⊢ƛ P:γ) N⇓ N:B (γ , refl) =
           let x=N⇂P : (ι ≺+ (x , N)) ∶ (Γ ‚ x ∶ B) ⇀ Γ ⇂ P
               x=N⇂P = lemma⇀ (lemmaι≺+⇀ N:B)
-              Πx=N : Ren (ι ≺+ (x ∶ N)) B (Γ ‚ x ∶ B)
-              Πx=N = lemma-Renι N⇓ N:B
+              Πx=N : Unary (ι ≺+ (x ∶ N)) B (Γ ‚ x ∶ B)
+              Πx=N = lemma-Unaryι N⇓ N:B
               Px=N⇓ = proj₁ (SN-lemma (hi (B , height P⇓) (right ≤′-refl)) P⇓ refl P:γ) x=N⇂P Πx=N
           in exp (β N⇓) Px=N⇓
 SN-lemma {M} {Γ} {α} {B} .{n = suc (height→ M→N ⊔ height N⇓)} (acc hi) (exp {.M} {N} M→N N⇓) refl M:α = thesis₁ , thesis₂
@@ -232,14 +286,14 @@ SN-lemma {M} {Γ} {α} {B} .{n = suc (height→ M→N ⊔ height N⇓)} (acc hi)
         M→βN = →SN⊂→β M→N
         N:α : Γ ⊢ N ∶ α
         N:α = lemma⊢→α* M:α (just (inj₁ M→βN))
-        thesis₁ : ∀ {σ Δ} → σ ∶ Γ ⇀ Δ ⇂ M → Ren σ B Γ → SN (M ∙ σ)
+        thesis₁ : ∀ {σ Δ} → σ ∶ Γ ⇀ Δ ⇂ M → Unary σ B Γ → SN (M ∙ σ)
         thesis₁ {σ} {Δ} σ⇂M Πσ =
           let _ , Mσ→P , P~Nσ = SN-lemma→ (hi (B , m) (right (m<′m⊔n+1 m n))) M→N refl M:α σ⇂M Πσ
               σ⇂N : σ ∶ Γ ⇀ Δ ⇂ N
               σ⇂N = λ x*N → σ⇂M (lemma→α* x*N M→βN)
               Nσ⇓ : SN (N ∙ σ)
               Nσ⇓ = proj₁ (SN-lemma (hi (B , n) (right (m<′n⊔m+1 n m))) N⇓ refl N:α) σ⇂N Πσ
-          in exp Mσ→P (SN-lemma-α Nσ⇓ (∼σ P~Nσ))
+          in exp Mσ→P (SN-lemma-α Nσ⇓ (<-well-founded (height Nσ⇓)) (∼σ P~Nσ))
         thesis₂ : ∀ {P} → SN P → Γ ⊢ P ∶ B → (∃ λ γ → α ≡ B ⇒ γ) → SN (M · P)
         thesis₂ P⇓ P:B α=β→γ =
           let NP⇓ = proj₂ (SN-lemma (hi (B , n) (right (m<′n⊔m+1 n m))) N⇓ refl N:α) P⇓ P:B α=β→γ
@@ -250,6 +304,8 @@ SN-theo (⊢v _) = sne v
 SN-theo (⊢· {α} {B} {M} M:α→β N:α) = let M⇓ = SN-theo M:α→β
                                      in proj₂ (SN-lemma (wfₜ,ₙ< (α , height M⇓)) M⇓ refl M:α→β) (SN-theo N:α) N:α (B , refl)
 SN-theo (⊢ƛ M:α) = abs (SN-theo M:α) 
+
+-- Main theorem
 
 sn-theo : ∀ {Γ M α} → Γ ⊢ M ∶ α → sn M
 sn-theo M:α = sound-SN (SN-theo M:α)
