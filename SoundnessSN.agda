@@ -163,19 +163,24 @@ subst-compat₁ {v _ · _} (ctxinj ())
 subst-compat₁ {(_ · _) · _} (ctxinj ())
 subst-compat₁ {v _} (ctxinj ())
 subst-compat₁ {ƛ _ _} (ctxinj ())
-subst-compat₁ {_ · N}{_}{σ} (ctx·l M→M') = let Q , Mσ→Q , Q~M'σ = subst-compat₁ M→M' in Q · (N ∙ σ) , ctx·l Mσ→Q , ∼· Q~M'σ ∼ρ
-subst-compat₁ {M · _}{_}{σ} (ctx·r N→N') = let Q , Nσ→Q , Q~N'σ = subst-compat₁ N→N' in (M ∙ σ) · Q , ctx·r Nσ→Q , ∼· ∼ρ Q~N'σ
-subst-compat₁ {ƛ x M}{ƛ .x M'}{σ} (ctxƛ M→M') = let z = χ (σ , ƛ x M)
-                                                    z#σ = χ-lemma2 σ (ƛ x M)
-                                                    N , Mσ,z/x→N , N~M'σ,z/x = subst-compat₁ {M}{M'} M→M'
-                                                    aux = begin
-                                                            ƛ z N
-                                                            ∼⟨ lemma∼λ N~M'σ,z/x ⟩
-                                                            ƛ z (M' [ σ ∣ x := v z ] )
-                                                            ∼⟨ ∼σ (corollary4-2 (#⇂-preservedby-β (ctxƛ M→M') z#σ)) ⟩
-                                                            ƛ x M' ∙ σ
-                                                          ∎
-                                                in ƛ z N , ctxƛ Mσ,z/x→N , aux
+subst-compat₁ {_ · N}{_}{σ} (ctx·l M→M') =
+  let Q , Mσ→Q , Q~M'σ = subst-compat₁ M→M'
+  in Q · (N ∙ σ) , ctx·l Mσ→Q , ∼· Q~M'σ ∼ρ
+subst-compat₁ {M · _}{_}{σ} (ctx·r N→N') =
+  let Q , Nσ→Q , Q~N'σ = subst-compat₁ N→N'
+  in (M ∙ σ) · Q , ctx·r Nσ→Q , ∼· ∼ρ Q~N'σ
+subst-compat₁ {ƛ x M}{ƛ .x M'}{σ} (ctxƛ M→M') =
+  let z = χ (σ , ƛ x M)
+      z#σ = χ-lemma2 σ (ƛ x M)
+      N , Mσ,z/x→N , N~M'σ,z/x = subst-compat₁ {M}{M'} M→M'
+      aux = begin
+              ƛ z N
+              ∼⟨ lemma∼λ N~M'σ,z/x ⟩
+              ƛ z (M' [ σ ∣ x := v z ] )
+              ∼⟨ ∼σ (corollary4-2 (#⇂-preservedby-β (ctxƛ M→M') z#σ)) ⟩
+              ƛ x M' ∙ σ
+            ∎
+  in ƛ z N , ctxƛ Mσ,z/x→N , aux
 
 -- Lemma 6
 
