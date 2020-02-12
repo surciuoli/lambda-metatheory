@@ -57,6 +57,7 @@ data sn : Λ → Set where
 data _→sn_ : Λ → Λ → Set where
   β    : ∀ {x M N} → sn N → ƛ x M · N →sn M [ x := N ]
   appl : ∀ {M M' N} → M →sn M' → M · N →sn M' · N
+  αsn  : ∀ {M N P} → M →sn N → N ∼α P → M →sn P
 
 -- Inductive definition for strong normalizing terms
 
@@ -66,7 +67,8 @@ data _→SN_ : Λ → Λ → Set
 
 data _→SN_ where
   β    : ∀ {M N x} → SN N → ƛ x M · N →SN M [ x := N ]
-  appl : ∀ {M M' N} → M →SN M' → M · N →SN M' · N   
+  appl : ∀ {M M' N} → M →SN M' → M · N →SN M' · N
+  αsn  : ∀ {M N P} → M →SN N → N ∼α P → M →SN P  
 
 data SNe where
   v   : ∀ {x} → SNe (v x)
@@ -128,6 +130,9 @@ confl-α {ƛ x M}{ƛ x' M'}{ƛ .x N} (∼ƛ {_}{_}{_}{.x'}{y} y#ƛxM y#ƛx'M' M[
       x'#ƛxN = lemma→β# (lemmaM∼N# (∼σ ƛxM~ƛx'M') x' #ƛ≡) (ctxƛ M→N)
       ƛx'K₂∼ƛxN = ∼τ (lemma∼λ {x = x'} (∼τ (∼σ K₁∼K₂) K₁∼N[x'/x])) (∼σ (corollary4-2' x'#ƛxN))
   in ƛ x' K₂ , ƛx'M'→ƛx'K₂ , ∼σ ƛx'K₂∼ƛxN
+
+postulate confl-α* : ∀ {M N P} → M ∼α N → M ⟶* P → ∃ λ Q → N ⟶* Q × P ∼α Q
+--confl-α* = {!!}
 
 sn-α : ∀ {M N} → M ∼α N → sn M → sn N
 sn-α {_}{N} M~N (def hi) = def λ N→P → sn-α-aux N→P
@@ -215,8 +220,6 @@ inv-app-lemma snMN = (def λ M→P → lemma-sn-app-aux₁ snMN M→P) , (def λ
 
 -- Lemma 10 (Weak head expansion)
 
--- this section has substantial differences --
-
 wkh-exp-α : ∀ {M N x Q} → sn N → sn Q → Q ∼α M [ x := N ] → sn (ƛ x M · N)
 
 wkh-exp-α-aux : ∀ {M x N P Q} → sn N → sn Q → Q ∼α M [ x := N ] → ƛ x M · N ⟶ P → sn P
@@ -255,25 +258,35 @@ closure·Ne R∈ne R∈sn N∈sn = def λ RN→Q → closure·Ne-aux R∈ne R∈
 
 -- Lemma 12 (Confluence)
 
-confluence : ∀ {M N N'} → M →sn N → M ⟶ N' → N ≡ N' ⊎ ∃ (λ Q → N' →sn Q × N ⟶* Q)
-confluence (β _) (ctxinj ▹β) = inj₁ refl
+postulate abs-snred-ƛ : ∀ {x M P} → ƛ x M →sn P → ⊥
+--abs-snred-ƛ = {!!}
+
+confluence : ∀ {M N N'} → M →sn N → M ⟶ N' → N ∼α N' ⊎ ∃ (λ Q → N' →sn Q × N ⟶* Q)
+confluence (β _) (ctxinj ▹β) = inj₁ ∼ρ
 confluence {ƛ x M · N} (β N∈sn) (ctx·l (ctxƛ {._}{._}{M'} M→M')) = inj₂ (M' [ x := N ] , β N∈sn , ⟶²⇒⟶* (subst-compat₁ M→M'))
 confluence (β _) (ctx·l (ctxinj ()))
 confluence {ƛ x M · N} (β (def N→N'⇒N∈sn)) (ctx·r .{_}{._}{N'} N→N') = inj₂ (M [ x := N' ] , β (N→N'⇒N∈sn N→N') , subst-compat₂ x M N→N')
-confluence (appl ()) (ctxinj ▹β)
+confluence (appl (αsn λxM→P _)) (ctxinj ▹β) = ⊥-elim (abs-snred-ƛ λxM→P)
+confluence (appl (appl _)) (ctxinj ())
+confluence (appl (β _)) (ctxinj ())
 confluence {M · N} (appl M→snM') (ctx·l M→M₂) with confluence M→snM' M→M₂
-... | inj₁ refl = inj₁ refl
+... | inj₁ M'∼M₂ = inj₁ (∼· M'∼M₂ ∼ρ)
 ... | inj₂ (P , M₂→snP , M'→*P) = inj₂ (P · N , appl M₂→snP , app-star-l M'→*P)
 confluence {M · N}{M' · .N}{.M · N'} (appl M→snM') (ctx·r N→N') = inj₂ (M' · N' , appl M→snM' , just (app-step-r (inj₁ N→N')))
+confluence (αsn M→N N∼P) M→Q with confluence M→N M→Q
+... | inj₁ N∼Q = inj₁ (∼τ (∼σ N∼P) N∼Q)
+... | inj₂ (S , Q→S , N→*S) = 
+  let T , P→*T , S∼T = confl-α* N∼P N→*S
+  in inj₂ (T , (αsn Q→S S∼T) , P→*T)
 
 -- Lemma 13
 
 backward→sn-aux : ∀ {M N M'} → sn M → sn N → M →sn M' → sn (M' · N) → sn (M · N)
 
 backward→sn-aux' : ∀ {M N M' Q} → M · N ⟶ Q → sn M → sn N → M →sn M' → sn (M' · N) → sn Q
-backward→sn-aux' (ctxinj ▹β) _ _ () _
+backward→sn-aux' (ctxinj ▹β) _ _ (αsn λxM→P _) _ = ⊥-elim (abs-snred-ƛ λxM→P)
 backward→sn-aux' {.M} {.N} (ctx·l {M} {M''} {N} M→M'') (def M→Q⇒Q∈sn) N∈sn M→snM' M'N∈sn with confluence M→snM' M→M''
-... | inj₁ refl = M'N∈sn
+... | inj₁ M'∼M'' = sn-α (∼· M'∼M'' ∼ρ) M'N∈sn
 ... | inj₂ (P , M''→snP , M'→*P) = backward→sn-aux (M→Q⇒Q∈sn M→M'') N∈sn M''→snP (multistep (app-star-l M'→*P) M'N∈sn )
 backward→sn-aux' {_}{N}{M'} (ctx·r {_}{_}{N'} N→N') M∈sn (def N→Q⇒Q∈sn) M→snM' (def M'N→Q⇒Q∈sn) =
   backward→sn-aux M∈sn (N→Q⇒Q∈sn N→N') M→snM' (M'N→Q⇒Q∈sn (ctx·r N→N'))
@@ -282,6 +295,7 @@ backward→sn-aux' {_}{N}{M'} (ctx·r {_}{_}{N'} N→N') M∈sn (def N→Q⇒Q�
 backward→sn-aux M∈sn N∈Sn M→snM' M'N∈sn = def λ MN→Q → backward→sn-aux' MN→Q M∈sn N∈Sn M→snM' M'N∈sn
 
 backward→sn : ∀ {M M'} → M →sn M' → sn M' → sn M
+backward→sn (αsn M→N N∼P) P∈sn = backward→sn M→N (sn-α (∼σ N∼P) P∈sn) 
 backward→sn (β N∈sn) M[x=N]∈sn = wkh-exp N∈sn M[x=N]∈sn
 backward→sn {M · N} {M' · .N} (appl M→M') M'N∈sn = let snM' , snN = inv-app-lemma M'N∈sn
                                                    in backward→sn-aux (backward→sn M→M' snM') snN M→M' M'N∈sn
@@ -309,5 +323,6 @@ sound-SNe v = lemma-sn-v
 sound-SNe (app M∈SNe N∈Sn) = closure·Ne (lemma-ne M∈SNe) (sound-SNe M∈SNe) (sound-SN N∈Sn)
 
 -- sound→SN : ∀ {M N} → M →SN N → M →sn N
+sound→SN (αsn M→N N∼P) = αsn (sound→SN M→N) N∼P
 sound→SN (β M∈Sn) = β (sound-SN M∈Sn)
 sound→SN (appl M→M') = appl (sound→SN M→M')
