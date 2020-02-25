@@ -13,6 +13,7 @@ open import ListProperties
 open import Relation using (just; trans)
 open import Unary
 open import TypeLemmas
+open import Neutral
 
 open import Data.Nat hiding (_*_)
 open import Relation.Binary.PropositionalEquality renaming (trans to trans≡)
@@ -75,8 +76,6 @@ SNe-preservedby-σ→SN {σ} {x} (app v _) (isv {y}) yPσ→N | v .y = ⊥-elim 
 SNe-preservedby-σ→SN {σ} {x} (app P⇓ Q⇓) isvarσx (appl Pσ→R) = SNe-preservedby-σ→SN P⇓ isvarσx Pσ→R
 SNe-preservedby-σ→SN {σ} {x} (app P⇓ Q⇓) isvarσx (αsn PQσ→R _) = SNe-preservedby-σ→SN (app P⇓ Q⇓) isvarσx PQσ→R
 
--- ne x M → SN M
--- ne x M → IsVar (σ x) → sn (M ∙ σ)  → ne y (M ∙ σ)
 SNe-preservedby-σ : ∀ {σ x M} → SNe x M → IsVar (σ x) → SN (M ∙ σ) → ∃ λ y → SNe y (M ∙ σ)
 SNe-preservedby-σ {σ} {x} v isvarσx xσ⇓ with σ x
 SNe-preservedby-σ {σ} {x} v (isv {.y}) (sne (v {.y})) | v y = y , v
@@ -97,12 +96,6 @@ lemmaσ⇂· σ⇂PQ = (λ x*P → σ⇂PQ (*·l x*P)) , (λ x*Q → σ⇂PQ (*�
 
 -- Main lemma
 
-{-SN-lemma : ∀ {M Γ α β}
-         → (M⇓ : SN M)
-         → Acc _ₜ,ₙ<_ (β , height M⇓)
-         → Γ ⊢ M ∶ α
-         → (∀ {σ Δ} → σ ∶ Γ ⇀ Δ ⇂ M → Unary σ Γ β → SN (M ∙ σ))
-           × (∀ {N} → SN N → (∃ λ γ → α ≡ β ⇒ γ) → Γ ⊢ N ∶ β → SN (M · N)) -}
 SN-lemma : ∀ {M Γ α β N}
          → (M⇓ : SN M)
          → Acc _ₜ,ₙ<_ (β , height M⇓)

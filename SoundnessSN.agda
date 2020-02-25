@@ -64,9 +64,9 @@ data SN where
 
 -- Neutral form
 
-data ne : V → Λ → Set where
-  nv   : ∀ {x} → ne x (v x)
-  napp : ∀ {x M N} → ne x M → ne x (M · N)
+data wne : V → Λ → Set where
+  nv   : ∀ {x} → wne x (v x)
+  napp : ∀ {x M N} → wne x M → wne x (M · N)
 
 subst-compat₁ : ∀ {M N σ} → M →β N → ∃ λ P → M ∙ σ →β P × P ∼α N ∙ σ
 
@@ -232,15 +232,15 @@ wkh-exp snN snM[N/x] = wkh-exp-α snN snM[N/x] ∼ρ
 
 -- Lemma 11
 
-closure→Ne : ∀ {R R' x} → ne x R → R →β R' → ne x R'
+closure→Ne : ∀ {R R' x} → wne x R → R →β R' → wne x R'
 closure→Ne nv (ctxinj ())
 closure→Ne (napp ()) (ctxinj ▹β)
 closure→Ne (napp R∈ne) (ctx·l R→P) = napp (closure→Ne R∈ne R→P)
 closure→Ne (napp R∈ne) (ctx·r {_}{_}{P} N→P) = napp R∈ne
 
-closure·Ne : ∀ {R N x} → ne x R → sn R → sn N → sn (R · N)
+closure·Ne : ∀ {R N x} → wne x R → sn R → sn N → sn (R · N)
 
-closure·Ne-aux : ∀ {R N Q x} → ne x R → sn R → sn N → R · N →β Q → sn Q
+closure·Ne-aux : ∀ {R N Q x} → wne x R → sn R → sn N → R · N →β Q → sn Q
 closure·Ne-aux () snR snN (ctxinj ▹β)
 closure·Ne-aux neR (def R→P⇒snP) snN (ctx·l R→R') = closure·Ne (closure→Ne neR R→R') (R→P⇒snP R→R') snN
 closure·Ne-aux neR snR (def N→P⇒snP) (ctx·r N→N') = closure·Ne neR snR (N→P⇒snP N→N')
@@ -293,7 +293,7 @@ backward→sn {M · N} {M' · .N} (appl M→M') M'N∈sn = let snM' , snN = inv-
                                                    in backward→sn-aux (backward→sn M→M' snM') snN M→M' M'N∈sn
 -- Lemma 14
 
-lemma-ne : ∀ {M x} → SNe x M → ne x M
+lemma-ne : ∀ {M x} → SNe x M → wne x M
 lemma-ne v = nv
 lemma-ne (app M∈ne _) = napp (lemma-ne M∈ne)
 

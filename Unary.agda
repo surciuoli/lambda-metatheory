@@ -14,8 +14,6 @@ open import Relation.Nullary
 data IsVar : Λ → Set where
   isv : ∀ {x} → IsVar (v x)
 
---Unary : Σ → Cxt → Type → Set
---Unary σ Γ α = ∀ {x} → IsVar (σ x) ⊎ (Γ ⊢ v x ∶ α)
 Unary : Σ → Λ → Cxt → Type → Set
 Unary σ M Γ α = ∀ {x} → IsVar (σ x) ⊎ σ x ≡ M × (Γ ⊢ v x ∶ α)
 
