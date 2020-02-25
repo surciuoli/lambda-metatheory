@@ -41,6 +41,7 @@ data _→sn_ : Λ → Λ → Set where
   β    : ∀ {x M N} → sn N → ƛ x M · N →sn M [ x := N ]
   appl : ∀ {M M' N} → M →sn M' → M · N →sn M' · N
   αsn  : ∀ {M N P} → M →sn N → N ∼α P → M →sn P
+--  αsn  : ∀ {M N P} → M ∼α N → M →sn N
 
 -- Convenient definition of strongly normalizing terms
 
@@ -51,7 +52,8 @@ data _→SN_ : Λ → Λ → Set
 data _→SN_ where
   β    : ∀ {M N x} → SN N → ƛ x M · N →SN M [ x := N ]
   appl : ∀ {M M' N} → M →SN M' → M · N →SN M' · N
-  αsn  : ∀ {M N P} → M →SN N → N ∼α P → M →SN P  
+  αsn  : ∀ {M N P} → M →SN N → N ∼α P → M →SN P
+--  αsn  : ∀ {M N P} → M ∼α N → M →SN N
 
 data SNe where
   v   : ∀ {x} → SNe x (v x)
