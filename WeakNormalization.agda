@@ -9,11 +9,12 @@ open import Beta
 open import Alpha
 open import SubstitutionLemmas
 open import ListProperties
-open import Relation using (just; trans)
+open import Relation using (just; trans) renaming (refl to reflR)
 open import Unary
 open import TypeLemmas
 open import SoundnessSN using (wne)
 open import ParallelReduction
+open import SubstitutionCompatibilityLemmas
 
 open import Data.Nat hiding (_*_)
 open import Relation.Binary.PropositionalEquality renaming (trans to trans≡)
@@ -35,8 +36,6 @@ wfₜ,ₙ< = wfΣ wfₜ<⁺ <-well-founded
 
 -- Definitions
 
-_↠_ = _→α*_
-
 data WN : Λ → Set
 data WNe : V → Λ → Set 
 
@@ -46,7 +45,7 @@ data WNe where
 
 data WN where
   sne : ∀ {M x} → WNe x M → WN M 
-  abs : ∀ {M x} → WN M → WN (ƛ x M) 
+  abs : ∀ {x M} → WN M → WN (ƛ x M) 
   exp : ∀ {M N} → M ↠ N → WN N → WN M
 
 heightNe : ∀ {M x} → WNe x M → ℕ 
@@ -69,15 +68,28 @@ data ne where
   app : ∀ {x M N} → ne x M → nf N → ne x (M · N)
 
 data nf where
-  app : ∀ {M x} → ne x M → nf M
-  ƛ : ∀ {x M} → nf M → nf (ƛ x M)
+  nfe : ∀ {M x} → ne x M → nf M
+  abs : ∀ {x M} → nf M → nf (ƛ x M)
   
-data wn : Λ → Set where
-  wbase : ∀ {M} → nf M → wn M
-  wind  : ∀ {M N} → M ↠ N → wn N → wn M
+wn : Λ → Set
+wn M = ∃ λ N → M ↠ N × nf N
 
 sound-WN : ∀ {M} → WN M → wn M
-sound-WN = {!!}
+sound-WNe : ∀ {x M} → WNe x M → wn M
+
+sound-WN (sne M⇓) = sound-WNe M⇓
+sound-WN (abs {x} M⇓) =
+  let N , M→N , nfN = sound-WN M⇓
+  in ƛ x N , abs-star M→N , abs nfN
+sound-WN (exp M→N N⇓) =
+  let P , N→P , nfP = sound-WN N⇓
+  in P , trans M→N N→P , nfP
+
+sound-WNe (v {x}) = v x , reflR , nfe v
+sound-WNe (app M⇓ N⇓) =
+  let M' , M→M' , nfM' = sound-WNe M⇓
+      N' , N→N' , nfN' = sound-WN N⇓
+  in M' · N' , trans (app-star-l M→M') (app-star-r N→N') , {!!}
 
 -- Auxiliary lemmas
 
@@ -90,22 +102,23 @@ m<′n⊔m+1 : ∀ m n → m <′ suc (n ⊔ m)
 m<′n⊔m+1 m n with n ⊔ m | ⊔-comm n m
 m<′n⊔m+1 m n | .(m ⊔ n) | refl = m<′m⊔n+1 m n
 
-WNe-preservedby-σ : ∀ {σ x M} → WNe x M → IsVar (σ x) → WN (M ∙ σ) → ∃ λ y → WNe y (M ∙ σ)
-WNe-preservedby-σ = {!!}
-{-WNe-preservedby-σ {σ} {x} v isvarσx xσ⇓ with σ x
-WNe-preservedby-σ {σ} {x} v (isv {.y}) (sne (v {.y})) | v y = y , v
-WNe-preservedby-σ {σ} {x} v (isv {.y}) (exp y→M _) | v y = ⊥-elim (SNe-preservedby-σ→SN (v {x}) (isv {y}) y→M)
-WNe-preservedby-σ {σ} {x} (app P⇓ Q⇓) _ (sne (app {y} Pσ⇓ Qσ⇓)) = y , app Pσ⇓ Qσ⇓ 
-WNe-preservedby-σ {σ} {x} (app P⇓ Q⇓) isvarσx (exp PQσ→M _) = ⊥-elim (SNe-preservedby-σ→SN (app P⇓ Q⇓) isvarσx PQσ→M)-}
-
 lemmaσ⇂· : ∀ {σ Γ Δ P Q} → σ ∶ Γ ⇀ Δ ⇂ P · Q → (σ ∶ Γ ⇀ Δ ⇂ P) × (σ ∶ Γ ⇀ Δ ⇂ Q)
 lemmaσ⇂· σ⇂PQ = (λ x*P → σ⇂PQ (*·l x*P)) , (λ x*Q → σ⇂PQ (*·r x*Q))
 
-lemma-wne : ∀ {x M} → WNe x M → wne x M
-lemma-wne = {!!}
+lemma₁ : ∀ {x M N} → wne x M → M ↠ N → wne x N
+lemma₁ = {!!}
 
-subst-compat : ∀ {M N σ} → M ↠ N → (M ∙ σ) ↠ (N ∙ σ)
-subst-compat = {!!}
+corollary₁ : ∀ {x M N} → wne x M → M ↠ N → nf N → ne x N
+corollary₁ = {!!}
+
+lemma₃ : ∀ {σ x y M} → wne x M → σ x ≡ v y → wne y (M ∙ σ)
+lemma₃ = {!!}
+
+WNe⇒wne : ∀ {x M} → WNe x M → wne x M
+WNe⇒wne = {!!}
+
+ne⇒WNe : ∀ {x M} → ne x M → WNe x M
+ne⇒WNe = {!!}
 
 -- Main lemma
 
@@ -148,10 +161,21 @@ WN-lemmaNe {P · Q} {Γ} {_} {B} {.x} {N} (app {x} P⇓ Q⇓) (acc hi) (⊢· {�
               Pσ:γ→ε = lemma⊢σM P:γ→ε σ⇂P                                                                            
               Qσ:γ : Δ ⊢ Q ∙ σ ∶ γ 
               Qσ:γ = lemma⊢σM Q:γ σ⇂Q
-              PQσ⇓₁ = λ isvσx → sne (app (proj₂ (WNe-preservedby-σ {σ} {x} {P} P⇓ isvσx Pσ⇓)) Qσ⇓)
+              PQσ⇓₁ = λ isvσx →
+                let R , Pσ→R , nfR = sound-WN Pσ⇓
+                    y , σx≡y = IsVar⇒∃y σ x isvσx
+                    wneP : wne x P
+                    wneP = WNe⇒wne P⇓
+                    wnePσ : wne y (P ∙ σ)
+                    wnePσ = lemma₃ {σ} {x} {y} wneP σx≡y
+                    neR : ne y R
+                    neR = corollary₁ {y} {P ∙ σ} {R} wnePσ Pσ→R nfR
+                    R⇓ : WNe y R
+                    R⇓ = ne⇒WNe neR
+                 in exp (app-star-l Pσ→R) (sne (app R⇓ Qσ⇓))
               PQσ⇓₂ = λ { (_ , Γ⊢x:B) →
                 let γ<β : γ ₜ<⁺ B
-                    γ<β = lemma-ₜ< (lemma-wne P⇓) Γ⊢x:B P:γ→ε
+                    γ<β = lemma-ₜ< (WNe⇒wne P⇓) Γ⊢x:B P:γ→ε
                 in proj₂ (WN-lemma Pσ⇓ (hi (γ , height Pσ⇓) (left γ<β)) Pσ:γ→ε Qσ⇓) (ε , refl) Qσ:γ }
           in [ PQσ⇓₁ , PQσ⇓₂ ]′ (Unyσ {x})
                                   
@@ -185,7 +209,7 @@ WN-lemma {M} {Γ} {α} {B} {P} (exp {.M} {N} M↠N N⇓) (acc hi) M:α P⇓ = th
               σ⇂N = λ x*N → σ⇂M ((dual-#-* lemma→α*#) x*N M↠N)
               Nσ⇓ : WN (N ∙ σ)
               Nσ⇓ = proj₁ (WN-lemma N⇓ (hi (B , n) (right ≤′-refl)) N:α P⇓) σ⇂N Unyσ
-          in exp (subst-compat M↠N) Nσ⇓
+          in exp (subst-compat↠ M↠N) Nσ⇓
         thesis₂ : (∃ λ γ → α ≡ B ⟶ γ) → Γ ⊢ P ∶ B → WN (M · P)
         thesis₂ α=β→γ P:B =
           let NP⇓ = proj₂ (WN-lemma  N⇓ (hi (B , n) (right ≤′-refl)) N:α P⇓) α=β→γ P:B
