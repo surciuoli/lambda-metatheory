@@ -8,6 +8,8 @@ open import Alpha
 open import Relation Λ 
 open import ParallelReduction
 open import SubstitutionLemmas
+open import SubstitutionCompatibilityLemmas hiding (_↠_)
+open import Neutral
 
 open import Relation.Nullary
 open import Data.Empty
@@ -18,19 +20,8 @@ open import Data.Nat hiding (_≟_)
 open import Function
 open import Relation.Binary.PropositionalEquality using (sym; subst₂)
 
-infix 5 _↠_ 
 infix 5 _→sn_
-infix 30 _[_:=_]
-infix 30 _[_∣_:=_]
 infix 4 _→SN_
-
-_↠_ = _→α*_
-
-_[_:=_] : Λ → V → Λ → Λ
-M [ x := N ] =  M ∙ ι ≺+ (x , N)
-
-_[_∣_:=_] : Λ → Σ → V → Λ → Λ
-M [ σ ∣ y := P ] = M ∙ σ ≺+ (y , P)
 
 -- Accessibility definition of strongly normalizing terms
 
@@ -64,129 +55,23 @@ data SN where
   abs  : ∀ {M x} → SN M → SN (ƛ x M) 
   exp : ∀ {M N} → M →SN N → SN N → SN M
 
--- Neutral form
-
-data wne : V → Λ → Set where
-  nv   : ∀ {x} → wne x (v x)
-  napp : ∀ {x M N} → wne x M → wne x (M · N)
-
-subst-compat₁ : ∀ {M N σ} → M →β N → ∃ λ P → M ∙ σ →β P × P ∼α N ∙ σ
-
-var-irred : ∀ {x M} → (v x) →β M → ⊥ 
-var-irred (ctxinj ())
-
-β-equiv : ∀ {M M' N N' x y} → ƛ x M · N ∼α ƛ y M' · N' → M [ x := N ] ∼α M' [ y := N' ]
-β-equiv (∼· {N = N} {N' = N'} (∼ƛ {M} {M'} {x} {y} {z} z#ƛxM z#ƛyM' xzM~yzM') N~N') =
-  begin
-    M [ x := N ]
-    ≈⟨ lemma≺+ z#ƛxM ⟩
-    M [ x := v z ] [ z := N ]
-    ∼⟨ lemma-subst xzM~yzM' (lemma≺+∼α⇂ {z} lemmaι∼α⇂ N~N') ⟩ 
-    M' [ y := v z ] [ z := N' ]
-    ≈⟨ sym (lemma≺+ z#ƛyM') ⟩
-    M' [ y := N' ]
-  ∎
-
-lemma-α-ren : ∀ {M N x y} → ƛ x M ∼α ƛ y N → M [ x := v y ] ∼α N
-lemma-α-ren (∼ƛ {M}{N}{x}{y}{z} z#ƛxM z#ƛyN M[x=z]~N[y=z]) =
-  begin
-    M [ x := v y ]
-    ≈⟨ lemma≺+ z#ƛxM ⟩
-    M [ x := v z ] [ z := v y ]
-    ≈⟨ lemmaM∼M'→Mσ≡M'σ M[x=z]~N[y=z] ⟩ 
-    N [ y := v z ] [ z := v y ]
-    ≈⟨ lemma≺+ι z#ƛyN ⟩ 
-    N ∙ ι 
-    ∼⟨ ∼σ lemma∙ι ⟩ 
-    N
-  ∎ 
-
-confl-α : ∀ {M N P} → M ∼α N → M →β P → ∃ λ Q → N →β Q × P ∼α Q
-confl-α ∼v (ctxinj ())
-confl-α {ƛ x M · N}{ƛ y M' · N'} ƛxMN∼ƛyM'N' (ctxinj ▹β) = M' [ y := N' ] , ctxinj ▹β , β-equiv ƛxMN∼ƛyM'N'
-confl-α (∼· ∼v _) (ctxinj ())
-confl-α (∼· (∼· _ _) _) (ctxinj ())
-confl-α (∼· {_}{_}{_}{N'} M~M' N~N') (ctx·l M→M'') with confl-α M~M' M→M''
-... | P , M'→P , M''~P = P · N' , ctx·l M'→P , ∼· M''~P N~N'
-confl-α (∼· {_}{M'}{_}{_} M~M' N~N') (ctx·r N→N'') with confl-α N~N' N→N''
-... | P , N'→P , N''~P = M' · P , ctx·r N'→P , ∼· M~M' N''~P
-confl-α (∼ƛ _ _ _) (ctxinj ())
-confl-α {ƛ x M}{ƛ x' M'}{ƛ .x N} (∼ƛ {_}{_}{_}{.x'}{y} y#ƛxM y#ƛx'M' M[y/x]~M'[y/x']) (ctxƛ M→N) = 
-  let ƛxM~ƛx'M' = (∼ƛ y#ƛxM y#ƛx'M' M[y/x]~M'[y/x'])
-      K₁ , M[x'/x]→K₁ , K₁∼N[x'/x] = subst-compat₁ {σ = ι ≺+ (x , v x')} M→N
-      M[x'/x]~M' = lemma-α-ren ƛxM~ƛx'M'
-      K₂ , M'→K₂ , K₁∼K₂ = confl-α M[x'/x]~M' M[x'/x]→K₁
-      ƛx'M'→ƛx'K₂ = ctxƛ {x = x'} M'→K₂
-      x'#ƛxN = lemma→β# (lemmaM∼N# (∼σ ƛxM~ƛx'M') x' #ƛ≡) (ctxƛ M→N)
-      ƛx'K₂∼ƛxN = ∼τ (lemma∼λ {x = x'} (∼τ (∼σ K₁∼K₂) K₁∼N[x'/x])) (∼σ (corollary4-2' x'#ƛxN))
-  in ƛ x' K₂ , ƛx'M'→ƛx'K₂ , ∼σ ƛx'K₂∼ƛxN
-
-confl-α* : ∀ {M N P} → M ∼α N → M ↠ P → ∃ λ Q → N ↠ Q × P ∼α Q
-confl-α* {M} {N} {.M} M∼N refl = N , refl , M∼N
-confl-α* M∼N (just (inj₁ M→P)) =
-  let Q , N→Q , P∼Q = confl-α M∼N M→P
-  in Q , just (inj₁ N→Q) , P∼Q
-confl-α* {M} M∼N (just (inj₂ M∼P)) = M , just (inj₂ (∼σ M∼N)) , ∼σ M∼P
-confl-α* M∼N (trans M→P P→Q) =
-  let R , N→R , P∼R = confl-α* M∼N M→P
-      S , R→S , Q∼S = confl-α* P∼R P→Q
-  in S , trans N→R R→S , Q∼S
+-- Auxiliary lemmas
 
 sn-α : ∀ {M N} → M ∼α N → sn M → sn N
 sn-α {_}{N} M~N (def hi) = def λ N→P → sn-α-aux N→P
   where sn-α-aux : ∀ {P} → N →β P → sn P
-        sn-α-aux N→P with confl-α (∼σ M~N) N→P
+        sn-α-aux N→P with conflα→β (∼σ M~N) N→P
         ... | _ , M→Q , P~Q = sn-α (∼σ P~Q) (hi M→Q)
+
+var-irred : ∀ {x M} → (v x) →β M → ⊥ 
+var-irred (ctxinj ())
 
 ⟶²⇒⟶* : ∀ {M N P} → M →β N × N ∼α P → M ↠ P
 ⟶²⇒⟶* (M→P , P~N) = trans (just (inj₁ M→P)) (just (inj₂ P~N))
 
-#⇂-preservedby-β : ∀ {M M' z σ} → M →β M' → z #⇂ (σ , M) → z #⇂ (σ , M')
-#⇂-preservedby-β M→M' z#σM = λ x x*M → z#σM x (lemma→α* x*M M→M')
+-- Lemma 5 (subst-compat₁): See SubstitutionCompatibilityLemmas module
 
-lemma∼α∙ : ∀ {M σ y z N} → z #⇂ (σ , ƛ y M) → M [ σ ∣ y := v z ] [ z := N ∙ σ ] ∼α M [ y := N ] ∙ σ
-lemma∼α∙ {M} {σ} {y} {z} {N} z#σ =
-  begin
-    M [ σ ∣ y :=  v z ] [ z := N ∙ σ ]
-    ∼⟨ corollary1SubstLemma z#σ ⟩
-    M [ σ ∣ y := N ∙ σ ]
-    ≈⟨ corollary1Prop7 {M}{N}{σ}{y} ⟩
-    M [ y := N ] ∙ σ
-  ∎
-
--- Lemma 5
-
---subst-compat₁ : ∀ {M N σ} → M ⟶ N → M ∙ σ ⟶² N ∙ σ 
-subst-compat₁ {ƛ y M · N}{_}{σ} (ctxinj ▹β) = M [ σ ∣ y := v z ] [ z := N ∙ σ ] , ctxinj ▹β , lemma∼α∙ z#σ
-  where z = χ (σ , ƛ y M)
-        z#σ = χ-lemma2 σ (ƛ y M)
-subst-compat₁ {v _ · _} (ctxinj ())
-subst-compat₁ {(_ · _) · _} (ctxinj ())
-subst-compat₁ {v _} (ctxinj ())
-subst-compat₁ {ƛ _ _} (ctxinj ())
-subst-compat₁ {_ · N}{_}{σ} (ctx·l M→M') =
-  let Q , Mσ→Q , Q~M'σ = subst-compat₁ M→M'
-  in Q · (N ∙ σ) , ctx·l Mσ→Q , ∼· Q~M'σ ∼ρ
-subst-compat₁ {M · _}{_}{σ} (ctx·r N→N') =
-  let Q , Nσ→Q , Q~N'σ = subst-compat₁ N→N'
-  in (M ∙ σ) · Q , ctx·r Nσ→Q , ∼· ∼ρ Q~N'σ
-subst-compat₁ {ƛ x M}{ƛ .x M'}{σ} (ctxƛ M→M') =
-  let z = χ (σ , ƛ x M)
-      z#σ = χ-lemma2 σ (ƛ x M)
-      N , Mσ,z/x→N , N~M'σ,z/x = subst-compat₁ {M}{M'} M→M'
-      aux = begin
-              ƛ z N
-              ∼⟨ lemma∼λ N~M'σ,z/x ⟩
-              ƛ z (M' [ σ ∣ x := v z ])
-              ∼⟨ ∼σ (corollary4-2 (#⇂-preservedby-β (ctxƛ M→M') z#σ)) ⟩
-              ƛ x M' ∙ σ
-            ∎
-  in ƛ z N , ctxƛ Mσ,z/x→N , aux
-
--- Lemma 6
-
-subst-compat₂ : ∀ {N N'} → (x : V) → (M : Λ) → N →β N' → M [ x := N ] ↠ M [ x := N' ]
-subst-compat₂ x M N→N' = lemma⇉⊆→α* (lemma⇉ (⇉ρ {M}) (corollary⇉ₛ≺+ x (lemma→α⊆⇉ (inj₁ N→N'))))
+-- Lemma 6 (subst-compat₂): See SubstitutionCompatibilityLemmas module
 
 -- Lemma 8
 
@@ -222,10 +107,10 @@ wkh-exp-α-aux : ∀ {M x N P Q} → sn N → sn Q → Q ∼α M [ x := N ] → 
 wkh-exp-α-aux snN snQ Q~M[N/x] (ctxinj ▹β) = sn-α Q~M[N/x] snQ
 wkh-exp-α-aux _ _ _ (ctx·l (ctxinj ()))
 wkh-exp-α-aux {_}{x} snN (def hi) Q~M[N/x] (ctx·l (ctxƛ M→M')) =
-  let _ , M[N/x]→R , R~M'[N/x] = subst-compat₁ M→M'
-      _ , Q→S , R~S  = confl-α (∼σ Q~M[N/x]) M[N/x]→R
+  let _ , M[N/x]→R , R~M'[N/x] = subst-compat→β M→M'
+      _ , Q→S , R~S  = conflα→β (∼σ Q~M[N/x]) M[N/x]→R
   in wkh-exp-α snN (hi Q→S) (∼τ (∼σ R~S) R~M'[N/x])
-wkh-exp-α-aux {M}{x} (def hi) snQ Q~M[N/x] (ctx·r N→N') = wkh-exp-α (hi N→N') (multistep (subst-compat₂ x M N→N') (sn-α Q~M[N/x] snQ)) ∼ρ
+wkh-exp-α-aux {M}{x} (def hi) snQ Q~M[N/x] (ctx·r N→N') = wkh-exp-α (hi N→N') (multistep (subst-compat x M N→N') (sn-α Q~M[N/x] snQ)) ∼ρ
 
 wkh-exp-α snN snQ Q~M[N/x] = def λ ƛxMN→Q → wkh-exp-α-aux snN snQ Q~M[N/x] ƛxMN→Q
 
@@ -235,10 +120,10 @@ wkh-exp snN snM[N/x] = wkh-exp-α snN snM[N/x] ∼ρ
 -- Lemma 11
 
 closure→Ne : ∀ {R R' x} → wne x R → R →β R' → wne x R'
-closure→Ne nv (ctxinj ())
-closure→Ne (napp ()) (ctxinj ▹β)
-closure→Ne (napp R∈ne) (ctx·l R→P) = napp (closure→Ne R∈ne R→P)
-closure→Ne (napp R∈ne) (ctx·r {_}{_}{P} N→P) = napp R∈ne
+closure→Ne var (ctxinj ())
+closure→Ne (app ()) (ctxinj ▹β)
+closure→Ne (app R∈ne) (ctx·l R→P) = app (closure→Ne R∈ne R→P)
+closure→Ne (app R∈ne) (ctx·r {_}{_}{P} N→P) = app R∈ne
 
 closure·Ne : ∀ {R N x} → wne x R → sn R → sn N → sn (R · N)
 
@@ -257,9 +142,9 @@ abs-snred-ƛ (αsn ƛxM→P _) = abs-snred-ƛ ƛxM→P
 
 confluence : ∀ {M N N'} → M →sn N → M →β N' → N ∼α N' ⊎ ∃ (λ Q → N' →sn Q × N ↠ Q)
 confluence (β _) (ctxinj ▹β) = inj₁ ∼ρ
-confluence {ƛ x M · N} (β N∈sn) (ctx·l (ctxƛ {._}{._}{M'} M→M')) = inj₂ (M' [ x := N ] , β N∈sn , ⟶²⇒⟶* (proj₂ (subst-compat₁ M→M')))
+confluence {ƛ x M · N} (β N∈sn) (ctx·l (ctxƛ {._}{._}{M'} M→M')) = inj₂ (M' [ x := N ] , β N∈sn , ⟶²⇒⟶* (proj₂ (subst-compat→β M→M')))
 confluence (β _) (ctx·l (ctxinj ()))
-confluence {ƛ x M · N} (β (def N→N'⇒N∈sn)) (ctx·r .{_}{._}{N'} N→N') = inj₂ (M [ x := N' ] , β (N→N'⇒N∈sn N→N') , subst-compat₂ x M N→N')
+confluence {ƛ x M · N} (β (def N→N'⇒N∈sn)) (ctx·r .{_}{._}{N'} N→N') = inj₂ (M [ x := N' ] , β (N→N'⇒N∈sn N→N') , subst-compat x M N→N')
 confluence (appl (αsn λxM→P _)) (ctxinj ▹β) = ⊥-elim (abs-snred-ƛ λxM→P)
 confluence (appl (appl _)) (ctxinj ())
 confluence (appl (β _)) (ctxinj ())
@@ -270,7 +155,7 @@ confluence {M · N}{M' · .N}{.M · N'} (appl M→snM') (ctx·r N→N') = inj₂
 confluence (αsn M→N N∼P) M→Q with confluence M→N M→Q
 ... | inj₁ N∼Q = inj₁ (∼τ (∼σ N∼P) N∼Q)
 ... | inj₂ (S , Q→S , N→*S) = 
-  let T , P→*T , S∼T = confl-α* N∼P N→*S
+  let T , P→*T , S∼T = conflα↠ N∼P N→*S
   in inj₂ (T , (αsn Q→S S∼T) , P→*T)
 
 -- Lemma 13
@@ -296,8 +181,8 @@ backward→sn {M · N} {M' · .N} (appl M→M') M'N∈sn = let snM' , snN = inv-
 -- Lemma 14
 
 lemma-ne : ∀ {M x} → SNe x M → wne x M
-lemma-ne v = nv
-lemma-ne (app M∈ne _) = napp (lemma-ne M∈ne)
+lemma-ne v = var
+lemma-ne (app M∈ne _) = app (lemma-ne M∈ne)
 
 -- Theorem 1
 

@@ -12,9 +12,9 @@ open import ListProperties
 open import Relation using (just; trans) renaming (refl to reflR)
 open import Unary
 open import TypeLemmas
-open import SoundnessSN using (wne)
 open import ParallelReduction
-open import SubstitutionCompatibilityLemmas
+open import SubstitutionCompatibilityLemmas hiding (_↠_)
+open import Neutral
 
 open import Data.Nat hiding (_*_)
 open import Relation.Binary.PropositionalEquality renaming (trans to trans≡)
@@ -57,19 +57,28 @@ heightNe (app M⇓ N⇓) = suc (heightNe M⇓ ⊔ height N⇓)
 height (abs M⇓) = suc (height M⇓)
 height (sne M⇓) = suc (heightNe M⇓)
 height (exp _ M⇓) = suc (height M⇓)
+  
+-- Auxiliary lemmas
+
+m<′m⊔n+1 : ∀ m n → m <′ suc (m ⊔ n)
+m<′m⊔n+1 m n = s≤′s (≤⇒≤′ (m≤m⊔n m n))
+
+⊔-comm = IsCommutativeMonoid.comm (IsCommutativeSemiringWithoutOne.+-isCommutativeMonoid ⊔-⊓-0-isCommutativeSemiringWithoutOne)
+
+m<′n⊔m+1 : ∀ m n → m <′ suc (n ⊔ m)
+m<′n⊔m+1 m n with n ⊔ m | ⊔-comm n m
+m<′n⊔m+1 m n | .(m ⊔ n) | refl = m<′m⊔n+1 m n
+
+lemmaσ⇂· : ∀ {σ Γ Δ P Q} → σ ∶ Γ ⇀ Δ ⇂ P · Q → (σ ∶ Γ ⇀ Δ ⇂ P) × (σ ∶ Γ ⇀ Δ ⇂ Q)
+lemmaσ⇂· σ⇂PQ = (λ x*P → σ⇂PQ (*·l x*P)) , (λ x*Q → σ⇂PQ (*·r x*Q))
+
+WNe⇒wne : ∀ {x M} → WNe x M → wne x M
+WNe⇒wne = {!!}
+
+ne⇒WNe : ∀ {x M} → ne x M → WNe x M
+ne⇒WNe = {!!}
 
 -- Soundness WN
-
-data ne : V → Λ → Set
-data nf : Λ → Set
-
-data ne where
-  v   : ∀ {x} → ne x (v x)
-  app : ∀ {x M N} → ne x M → nf N → ne x (M · N)
-
-data nf where
-  nfe : ∀ {M x} → ne x M → nf M
-  abs : ∀ {x M} → nf M → nf (ƛ x M)
   
 wn : Λ → Set
 wn M = ∃ λ N → M ↠ N × nf N
@@ -85,40 +94,11 @@ sound-WN (exp M→N N⇓) =
   let P , N→P , nfP = sound-WN N⇓
   in P , trans M→N N→P , nfP
 
-sound-WNe (v {x}) = v x , reflR , nfe v
+sound-WNe (v {x}) = v x , reflR , nfe var
 sound-WNe (app M⇓ N⇓) =
   let M' , M→M' , nfM' = sound-WNe M⇓
       N' , N→N' , nfN' = sound-WN N⇓
   in M' · N' , trans (app-star-l M→M') (app-star-r N→N') , {!!}
-
--- Auxiliary lemmas
-
-m<′m⊔n+1 : ∀ m n → m <′ suc (m ⊔ n)
-m<′m⊔n+1 m n = s≤′s (≤⇒≤′ (m≤m⊔n m n))
-
-⊔-comm = IsCommutativeMonoid.comm (IsCommutativeSemiringWithoutOne.+-isCommutativeMonoid ⊔-⊓-0-isCommutativeSemiringWithoutOne)
-
-m<′n⊔m+1 : ∀ m n → m <′ suc (n ⊔ m)
-m<′n⊔m+1 m n with n ⊔ m | ⊔-comm n m
-m<′n⊔m+1 m n | .(m ⊔ n) | refl = m<′m⊔n+1 m n
-
-lemmaσ⇂· : ∀ {σ Γ Δ P Q} → σ ∶ Γ ⇀ Δ ⇂ P · Q → (σ ∶ Γ ⇀ Δ ⇂ P) × (σ ∶ Γ ⇀ Δ ⇂ Q)
-lemmaσ⇂· σ⇂PQ = (λ x*P → σ⇂PQ (*·l x*P)) , (λ x*Q → σ⇂PQ (*·r x*Q))
-
-lemma₁ : ∀ {x M N} → wne x M → M ↠ N → wne x N
-lemma₁ = {!!}
-
-corollary₁ : ∀ {x M N} → wne x M → M ↠ N → nf N → ne x N
-corollary₁ = {!!}
-
-lemma₃ : ∀ {σ x y M} → wne x M → σ x ≡ v y → wne y (M ∙ σ)
-lemma₃ = {!!}
-
-WNe⇒wne : ∀ {x M} → WNe x M → wne x M
-WNe⇒wne = {!!}
-
-ne⇒WNe : ∀ {x M} → ne x M → WNe x M
-ne⇒WNe = {!!}
 
 -- Main lemma
 
@@ -161,16 +141,13 @@ WN-lemmaNe {P · Q} {Γ} {_} {B} {.x} {N} (app {x} P⇓ Q⇓) (acc hi) (⊢· {�
               Pσ:γ→ε = lemma⊢σM P:γ→ε σ⇂P                                                                            
               Qσ:γ : Δ ⊢ Q ∙ σ ∶ γ 
               Qσ:γ = lemma⊢σM Q:γ σ⇂Q
-              PQσ⇓₁ = λ isvσx →
+              PQσ⇓₁ = λ IsVarσx →
                 let R , Pσ→R , nfR = sound-WN Pσ⇓
-                    y , σx≡y = IsVar⇒∃y σ x isvσx
-                    wneP : wne x P
+                    y , σx≡y = IsVar⇒∃y σ x IsVarσx
                     wneP = WNe⇒wne P⇓
-                    wnePσ : wne y (P ∙ σ)
-                    wnePσ = lemma₃ {σ} {x} {y} wneP σx≡y
-                    neR : ne y R
-                    neR = corollary₁ {y} {P ∙ σ} {R} wnePσ Pσ→R nfR
-                    R⇓ : WNe y R
+                    wnePσ = lemma₃ wneP σx≡y
+                    wneR = lemma₁ wnePσ Pσ→R 
+                    neR = corollary₁ wneR nfR
                     R⇓ = ne⇒WNe neR
                  in exp (app-star-l Pσ→R) (sne (app R⇓ Qσ⇓))
               PQσ⇓₂ = λ { (_ , Γ⊢x:B) →
