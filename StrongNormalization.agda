@@ -13,6 +13,7 @@ open import ListProperties
 open import Relation using (just; trans)
 open import Unary
 open import TypeLemmas
+open import SubstitutionCompatibilityLemmas
 
 open import Data.Nat hiding (_*_)
 open import Relation.Binary.PropositionalEquality renaming (trans to trans≡)

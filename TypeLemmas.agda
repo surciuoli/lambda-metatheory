@@ -3,6 +3,7 @@ module TypeLemmas where
 open import SoundnessSN
 open import Term 
 open import Data.Sum
+open import Neutral
 
 open import Relation.Binary.PropositionalEquality hiding (trans)
 open import Induction.WellFounded
@@ -30,10 +31,10 @@ lemma-≡Γx : ∀ {α β Γ x} → Γ ⊢ v x ∶ α → Γ ⊢ v x ∶ β → 
 lemma-≡Γx (⊢v x∈Γ₁) (⊢v x∈Γ₂) = lemma∈!⟨⟩ x∈Γ₁ x∈Γ₂
 
 lemma-ₜ≤ : ∀ {α β Γ M x} → wne x M → Γ ⊢ v x ∶ β → Γ ⊢ M ∶ α → α ₜ<⁺ β ⊎ α ≡ β 
-lemma-ₜ≤  nv hdM:β hdM:α = inj₂ (lemma-≡Γx hdM:α hdM:β)
-lemma-ₜ≤  {A} {B} (napp M) hdM:β (⊢· M:γ→α _) with lemma-ₜ≤ M hdM:β M:γ→α
+lemma-ₜ≤  var hdM:β hdM:α = inj₂ (lemma-≡Γx hdM:α hdM:β)
+lemma-ₜ≤  {A} {B} (app M) hdM:β (⊢· M:γ→α _) with lemma-ₜ≤ M hdM:β M:γ→α
 ... | inj₁ γ→α<β = inj₁ (trans [ ₜ<r ] γ→α<β)
-lemma-ₜ≤ {A} .{γ ⟶ A} (napp _) hdM:β (⊢· {γ} M:γ→α _) | inj₂ refl = inj₁ [ ₜ<r ]
+lemma-ₜ≤ {A} .{γ ⟶ A} (app _) hdM:β (⊢· {γ} M:γ→α _) | inj₂ refl = inj₁ [ ₜ<r ]
 
 lemma-ₜ< : ∀ {α γ β Γ M x} → wne x M → Γ ⊢ v x ∶ β → Γ ⊢ M ∶ α ⟶ γ → α ₜ<⁺ β
 lemma-ₜ< M⇓ hdM:β M:α→γ with lemma-ₜ≤ M⇓ hdM:β M:α→γ 
