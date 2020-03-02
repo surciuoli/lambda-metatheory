@@ -28,3 +28,7 @@ lemma-Unary≺+ {x} {z} Unyσ .{x} | yes refl = inj₁ isv
 ... | no x≢y with Unyσ {y}
 ... | inj₁ isvar = inj₁ isvar
 ... | inj₂ (refl , Γ⊢y:β) = inj₂ (refl , lemmaWeakening⊢# (#v (sym≢ x≢y)) Γ⊢y:β)
+
+IsVar⇒∃y : (σ : Σ) → (x : V) → IsVar (σ x) → ∃ λ y → σ x ≡ v y
+IsVar⇒∃y σ x IsVarσx with σ x
+IsVar⇒∃y σ x (isv {y}) | v {.y} = y , refl

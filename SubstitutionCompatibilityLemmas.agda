@@ -15,7 +15,7 @@ open import Data.Sum
 open import Relation.Binary.Core hiding (Rel)
 open import Data.Product hiding (Σ)
 open import Data.Nat hiding (_≟_)
-open import Relation.Binary.PropositionalEquality using (sym; subst₂)
+open import Relation.Binary.PropositionalEquality using (sym; subst₂; refl)
 
 infix 5 _↠_ 
 infix 30 _[_:=_]
@@ -129,5 +129,11 @@ conflα↠ M∼N (trans M→P P→Q) =
 subst-compat : ∀ {N N'} → (x : V) → (M : Λ) → N →β N' → M [ x := N ] ↠ M [ x := N' ]
 subst-compat x M N→N' = lemma⇉⊆→α* (lemma⇉ (⇉ρ {M}) (corollary⇉ₛ≺+ x (lemma→α⊆⇉ (inj₁ N→N'))))
 
-postulate subst-compat↠ : ∀ {M N σ} → M ↠ N → (M ∙ σ) ↠ (N ∙ σ)
---subst-compat↠ = {!!}
+subst-compat↠ : ∀ {M N σ} → M ↠ N → (M ∙ σ) ↠ (N ∙ σ)
+subst-compat↠ refl = refl
+subst-compat↠ (just (inj₁ M→βN)) =
+  let P , Mσ→βP , P∼Nσ = subst-compat→β M→βN
+  in trans (just (inj₁ Mσ→βP)) (just (inj₂ P∼Nσ))
+subst-compat↠ {M} {N} {σ} (just (inj₂ M∼N)) with M ∙ σ | N ∙ σ | lemmaM∼M'→Mσ≡M'σ {M} {N} {σ} M∼N
+... | P | .P | refl = refl
+subst-compat↠ (trans M↠N N↠P) = trans (subst-compat↠ M↠N) (subst-compat↠ N↠P)

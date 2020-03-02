@@ -40,22 +40,22 @@ data WN : Λ → Set
 data WNe : V → Λ → Set 
 
 data WNe where
-  v   : ∀ {x} → WNe x (v x)
+  var : ∀ {x} → WNe x (v x)
   app : ∀ {x M N} → WNe x M → WN N → WNe x (M · N)
 
 data WN where
-  sne : ∀ {M x} → WNe x M → WN M 
+  wke : ∀ {M x} → WNe x M → WN M 
   abs : ∀ {x M} → WN M → WN (ƛ x M) 
   exp : ∀ {M N} → M ↠ N → WN N → WN M
 
 heightNe : ∀ {M x} → WNe x M → ℕ 
 height   : ∀ {M} → WN M → ℕ 
 
-heightNe v = 0
+heightNe var = 0
 heightNe (app M⇓ N⇓) = suc (heightNe M⇓ ⊔ height N⇓)
 
 height (abs M⇓) = suc (height M⇓)
-height (sne M⇓) = suc (heightNe M⇓)
+height (wke M⇓) = suc (heightNe M⇓)
 height (exp _ M⇓) = suc (height M⇓)
   
 -- Auxiliary lemmas
@@ -73,10 +73,17 @@ lemmaσ⇂· : ∀ {σ Γ Δ P Q} → σ ∶ Γ ⇀ Δ ⇂ P · Q → (σ ∶ Γ
 lemmaσ⇂· σ⇂PQ = (λ x*P → σ⇂PQ (*·l x*P)) , (λ x*Q → σ⇂PQ (*·r x*Q))
 
 WNe⇒wne : ∀ {x M} → WNe x M → wne x M
-WNe⇒wne = {!!}
+WNe⇒wne var = var
+WNe⇒wne (app M⇓ _) = app (WNe⇒wne M⇓)
 
 ne⇒WNe : ∀ {x M} → ne x M → WNe x M
-ne⇒WNe = {!!}
+nf⇒WN : ∀ {M} → nf M → WN M
+
+ne⇒WNe var = var
+ne⇒WNe (app neM nfN) = app (ne⇒WNe neM) (nf⇒WN nfN)
+
+nf⇒WN (nfe neM) = wke (ne⇒WNe neM)
+nf⇒WN (abs nfM) = abs (nf⇒WN nfM)
 
 -- Soundness WN
   
@@ -86,7 +93,7 @@ wn M = ∃ λ N → M ↠ N × nf N
 sound-WN : ∀ {M} → WN M → wn M
 sound-WNe : ∀ {x M} → WNe x M → wn M
 
-sound-WN (sne M⇓) = sound-WNe M⇓
+sound-WN (wke M⇓) = sound-WNe M⇓
 sound-WN (abs {x} M⇓) =
   let N , M→N , nfN = sound-WN M⇓
   in ƛ x N , abs-star M→N , abs nfN
@@ -94,11 +101,13 @@ sound-WN (exp M→N N⇓) =
   let P , N→P , nfP = sound-WN N⇓
   in P , trans M→N N→P , nfP
 
-sound-WNe (v {x}) = v x , reflR , nfe var
+sound-WNe (var {x}) = v x , reflR , nfe var
 sound-WNe (app M⇓ N⇓) =
   let M' , M→M' , nfM' = sound-WNe M⇓
       N' , N→N' , nfN' = sound-WN N⇓
-  in M' · N' , trans (app-star-l M→M') (app-star-r N→N') , {!!}
+      wneM' = lemma₁ (WNe⇒wne M⇓) M→M'
+      neM' = corollary₁ wneM' nfM'
+  in M' · N' , trans (app-star-l M→M') (app-star-r N→N') , nfe (app neM' nfN')
 
 -- Main lemma
 
@@ -118,13 +127,13 @@ WN-lemmaNe : ∀ {M Γ α β x N}
            → (∀ {σ Δ} → σ ∶ Γ ⇀ Δ ⇂ M → Unary σ N Γ β → WN (M ∙ σ))
              × ((∃ λ γ → α ≡ β ⟶ γ) → Γ ⊢ N ∶ β → WN (M · N)) 
 
-WN-lemmaNe .{v x} {Γ} {_} {B} {.x} {N} (v {x}) _ _ N⇓  = thesis₁ , λ _ _ → sne (app v N⇓)
+WN-lemmaNe .{v x} {Γ} {_} {B} {.x} {N} (var {x}) _ _ N⇓  = thesis₁ , λ _ _ → wke (app var N⇓)
   where thesis₁ : ∀ {σ} {Δ} → σ ∶ Γ ⇀ Δ ⇂ (v x) → Unary σ N Γ B → WN (v x ∙ σ)
         thesis₁ {σ} _ Unyσ with σ x | Unyσ {x} 
-        ... | .(v y) | inj₁ (isv {y}) = sne v
+        ... | .(v y) | inj₁ (isv {y}) = wke var
         ... | _ | inj₂ (refl , _) = N⇓ 
 WN-lemmaNe {P · Q} {Γ} {_} {B} {.x} {N} (app {x} P⇓ Q⇓) (acc hi) (⊢· {γ} {ε} P:γ→ε Q:γ) N⇓ =
-  thesis₁ , λ _ _ → sne (app (app P⇓ Q⇓) N⇓)
+  thesis₁ , λ _ _ → wke (app (app P⇓ Q⇓) N⇓)
     where
         thesis₁ : ∀ {σ Δ} → σ ∶ Γ ⇀ Δ ⇂ P · Q → Unary σ N Γ B → WN (P · Q ∙ σ)
         thesis₁ {σ} {Δ} σ⇂PQ Unyσ =
@@ -149,14 +158,14 @@ WN-lemmaNe {P · Q} {Γ} {_} {B} {.x} {N} (app {x} P⇓ Q⇓) (acc hi) (⊢· {�
                     wneR = lemma₁ wnePσ Pσ→R 
                     neR = corollary₁ wneR nfR
                     R⇓ = ne⇒WNe neR
-                 in exp (app-star-l Pσ→R) (sne (app R⇓ Qσ⇓))
+                 in exp (app-star-l Pσ→R) (wke (app R⇓ Qσ⇓))
               PQσ⇓₂ = λ { (_ , Γ⊢x:B) →
                 let γ<β : γ ₜ<⁺ B
                     γ<β = lemma-ₜ< (WNe⇒wne P⇓) Γ⊢x:B P:γ→ε
                 in proj₂ (WN-lemma Pσ⇓ (hi (γ , height Pσ⇓) (left γ<β)) Pσ:γ→ε Qσ⇓) (ε , refl) Qσ:γ }
           in [ PQσ⇓₁ , PQσ⇓₂ ]′ (Unyσ {x})
                                   
-WN-lemma {β = B} (sne M⇓) (acc hi) = WN-lemmaNe M⇓ (hi (B , heightNe M⇓) (right ≤′-refl))
+WN-lemma {β = B} (wke M⇓) (acc hi) = WN-lemmaNe M⇓ (hi (B , heightNe M⇓) (right ≤′-refl))
 WN-lemma {ƛ x P} {Γ} {δ ⟶ ε} {B} {N} (abs P⇓) (acc hi) (⊢ƛ P:ε) N⇓ = thesis₁ , thesis₂ (⊢ƛ P:ε)
   where thesis₁ : ∀ {σ Δ} → σ ∶ Γ ⇀ Δ ⇂ ƛ x P → Unary σ N Γ B → WN (ƛ x P ∙ σ)
         thesis₁ {σ} {Δ} σ⇂ƛxP Unyσ =
@@ -193,7 +202,7 @@ WN-lemma {M} {Γ} {α} {B} {P} (exp {.M} {N} M↠N N⇓) (acc hi) M:α P⇓ = th
           in exp (app-star-l M↠N) NP⇓ 
 
 WN-theo : ∀ {Γ M α} → Γ ⊢ M ∶ α → WN M
-WN-theo (⊢v _) = sne v
+WN-theo (⊢v _) = wke var
 WN-theo (⊢· {α} {B} {M} M:α→β N:α) =
   let M⇓ = WN-theo M:α→β
   in proj₂ (WN-lemma M⇓ (wfₜ,ₙ< (α , height M⇓)) M:α→β (WN-theo N:α)) (B , refl) N:α
