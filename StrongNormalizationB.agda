@@ -1,4 +1,4 @@
-module StrongNormalization where
+module StrongNormalizationB where
 
 open import SoundnessSN
 open import Term renaming (_⟶_ to _⇒_)
