@@ -1,4 +1,4 @@
-module Unary where
+module UnaryB where
 
 open import Chi
 open import Term
