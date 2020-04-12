@@ -11,7 +11,7 @@ open import Alpha
 open import SubstitutionLemmas
 open import ListProperties
 open import Relation using (just; trans)
-open import Unary
+open import UnaryB
 open import TypeLemmas
 open import SubstitutionCompatibilityLemmas
 
