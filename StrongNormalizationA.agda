@@ -72,11 +72,19 @@ lemmaσ⇂· σ⇂PQ = (λ x*P → σ⇂PQ (*·l x*P)) , (λ x*Q → σ⇂PQ (*�
 ≡⇒α : ∀ {M N} → M ≡ N → M ∼α N
 ≡⇒α {M} M≡N = subst₂ _∼α_ refl M≡N (∼ρ {M})
 
-invol≺+ : ∀ {x M P σ} → x # P → (σ ≺+ (x , M)) ≅ σ ⇂ P
-invol≺+ = {!!}
+invol≺+ : ∀ {σ x M P} → x # P → (σ ≺+ (x , M)) ≅ σ ⇂ P
+invol≺+ {σ} {x} {M} {P} x#P = ∼*ρ , aux
+  where aux : (y : V) → y * P → (σ ≺+ (x , M)) y ≡ σ y
+        aux y y*P with x ≟ y
+        ... | no _ = refl
+        aux .x x*P | yes refl = ⊥-elim (lemma-free→¬# x*P x#P)
 
 weaken-dom : ∀ {x M σ Γ Δ} → σ ∶ Γ ⇀ Δ ⇂ M → σ ∶ Γ ⇀ Δ ⇂ ƛ x M
-weaken-dom = {!!}
+weaken-dom {x} {M} {σ} {Γ} {Δ} σ⇂M = λ y*M → aux y*M
+  where aux : ∀ {x y} → y * ƛ x M → (p : y ∈ Γ) → Δ ⊢ σ y ∶ Γ ⟨ p ⟩
+        aux {x} {y} (*ƛ x*M _) y∈Γ with y ≟ x
+        ... | no _ = σ⇂M x*M y∈Γ
+        aux {x} {.x} (*ƛ _ x≢x) _ | yes refl = ⊥-elim (x≢x refl)
 
 -- Main lemma
 
@@ -149,7 +157,7 @@ SN-lemmaNe {P · Q} {Γ} {_} {B} {.y} {N} (app {y} P⇓ Q⇓) (acc hi) (⊢· {�
               Qσ⇓ : SN (Q ∙ σ)
               Qσ⇓ = proj₁ (SN-lemma Q⇓ (hi (B , n) (right (m<′n⊔m+1 n m))) Q:γ N⇓) σ⇂Q Unyσ x:B
               PQσ⇓y = app (proj₂ Pσ⇓) Qσ⇓
-          in sne PQσ⇓y , {!!}
+          in sne PQσ⇓y , λ _ → (proj₁ Pσ⇓ , PQσ⇓y)
         thesis₁ {.y} {σ} {Δ} σ⇂PQ Unyσ y:B | yes refl =
           let m , n = heightNe P⇓ , height Q⇓
               σ⇂P : σ ∶ Γ ⇀ Δ ⇂ P
