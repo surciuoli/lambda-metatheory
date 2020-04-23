@@ -45,10 +45,14 @@ unary≺+≢ {x} {y} {z} {σ} y≢x Unyσ with y ≟ x
         ... | no _ = proj₂ Unyσ w≢x
         aux {.y} _ | yes refl = isv
 
-unaryv : ∀ {x y z M σ} → Unary σ x (v y) → Unary (σ ≺+ (z , M)) z M
-unaryv = ?
-{-uanryv {x} {y} {z} Unyσ with z ≟ z
+unaryv : ∀ {x y z σ M} → Unary σ x (v y) → Unary (σ ≺+ (z , M)) z M
+unaryv {x} {y} {z} Unyσ with z ≟ z
 ... | no z≢z = ⊥-elim (z≢z refl)
-... | yes _ = aux
-  where aux : {w : V} → -}
-
+unaryv {x} {y} {z} {σ} {M} Unyσ | yes refl = refl , aux
+  where aux : {w : V} → w ≢ z → IsVar ((σ ≺+ (z , M)) w)
+        aux {w} _ with z ≟ w
+        ... | no _ with x ≟ w
+        ... | no x≢w = proj₂ Unyσ (sym≢ x≢w)
+        aux {.x} _ | no _ | yes refl with σ x | proj₁ Unyσ
+        ... | v .y | refl = isv
+        aux {.z} w≢z | yes refl = ⊥-elim (w≢z refl)        
