@@ -1,5 +1,6 @@
 module StrongNormalizationABuggy where
 
+open import SN
 open import SoundnessSN
 open import Term 
 open import Chi
@@ -14,6 +15,7 @@ open import Relation using (just; trans)
 open import Unary
 open import TypeLemmas
 open import SubstitutionCompatibilityLemmas
+open import PropertiesSN
 
 open import Data.Nat hiding (_*_)
 open import Relation.Binary.PropositionalEquality renaming (trans to trans≡)
@@ -24,16 +26,8 @@ open import Relation.Nullary
 
 -- Auxiliary lemmas
 
-→SN⊂→α : ∀ {M N} → M →SN N → M →α* N
-→SN⊂→α (β _)  = just (inj₁ (ctxinj ▹β))
-→SN⊂→α (appl M→M') = app-star-l (→SN⊂→α M→M')
-→SN⊂→α (αsn M→N N∼P) = trans (→SN⊂→α M→N) (just (inj₂ N∼P))
-
 lemmaσ⇂· : ∀ {σ Γ Δ P Q} → σ ∶ Γ ⇀ Δ ⇂ P · Q → (σ ∶ Γ ⇀ Δ ⇂ P) × (σ ∶ Γ ⇀ Δ ⇂ Q)
 lemmaσ⇂· σ⇂PQ = (λ x*P → σ⇂PQ (*·l x*P)) , (λ x*Q → σ⇂PQ (*·r x*Q))
-
-≡⇒α : ∀ {M N} → M ≡ N → M ∼α N
-≡⇒α {M} M≡N = subst₂ _∼α_ refl M≡N (∼ρ {M})
 
 invol≺+ : ∀ {σ x M P} → x # P → (σ ≺+ (x , M)) ≅ σ ⇂ P
 invol≺+ {σ} {x} {M} {P} x#P = ∼*ρ , aux
@@ -48,6 +42,10 @@ weaken-dom {x} {M} {σ} {Γ} {Δ} σ⇂M = λ y*M → aux y*M
         aux {x} {y} (*ƛ x*M _) y∈Γ with y ≟ x
         ... | no _ = σ⇂M x*M y∈Γ
         aux {x} {.x} (*ƛ _ x≢x) _ | yes refl = ⊥-elim (x≢x refl)
+
+→SN⊂→α : ∀ {M N} → M →SN N → M →α* N
+→SN⊂→α (β _)  = just (inj₁ (ctxinj ▹β))
+→SN⊂→α (appl M→M') = app-star-l (→SN⊂→α M→M')
 
 -- Main lemma
 
@@ -67,7 +65,7 @@ SN-lemma→ : ∀ {M N σ Γ Δ α β P x}
           → σ ∶ Γ ⇀ Δ ⇂ M        
           → Unary σ x P
           → Γ ⊢ v x ∶ β
-          → (M ∙ σ) →SN (N ∙ σ)
+          → ∃ λ Q → (M ∙ σ) →SN Q × Q ∼α N ∙ σ
 
 SN-lemmaNe : ∀ {M Γ α β y N}
            → SNe y M
@@ -77,10 +75,6 @@ SN-lemmaNe : ∀ {M Γ α β y N}
            → (∀ {x σ Δ} → σ ∶ Γ ⇀ Δ ⇂ M → Unary σ x N → Γ ⊢ v x ∶ β → SN (M ∙ σ) × (y ≢ x → ∃ λ z → SNe z (M ∙ σ)))
              × ((∃ λ γ → α ≡ β ⟶ γ) → Γ ⊢ N ∶ β → SN (M · N)) 
 
-SN-lemma→ {_} {_} {σ} {Γ} {Δ} {α} {B} (αsn M→N N∼P) accB M:A P⇓ σ⇂M Unyσ x:B =
-  let Mσ→Nσ = SN-lemma→ M→N accB M:A P⇓ σ⇂M Unyσ x:B
-      Nσ∼Pσ = ≡⇒α (lemmaM∼M'→Mσ≡M'σ N∼P)
-  in αsn Mσ→Nσ Nσ∼Pσ
 SN-lemma→ {ƛ y M · N} {_} {σ} {Γ} {Δ} {α} {B} {_} {x} (β N⇓) accB (⊢· _ N:γ) P⇓ σ⇂ƛyMN Unyσ x:B =
   let z : V
       z = χ (σ , ƛ y M)
@@ -90,12 +84,16 @@ SN-lemma→ {ƛ y M · N} {_} {σ} {Γ} {Δ} {α} {B} {_} {x} (β N⇓) accB (�
       Nσ⇓ = proj₁ (SN-lemma N⇓ accB N:γ P⇓) σ⇂N Unyσ x:B
       Mσ,x=z,z=Nσ~Mx=Nσ : (M ∙ σ ≺+ (y , v z)) ∙ ι ≺+ (z , N ∙ σ) ∼α (M ∙ ι ≺+ (y , N)) ∙ σ
       Mσ,x=z,z=Nσ~Mx=Nσ = lemma∼α∙ (χ-lemma2 σ (ƛ y M))
-  in αsn (β Nσ⇓) Mσ,x=z,z=Nσ~Mx=Nσ
+  in ((M ∙ (σ ≺+ (y , v z))) ∙ (ι ≺+ (z , N ∙ σ ))) , β Nσ⇓ , Mσ,x=z,z=Nσ~Mx=Nσ
 SN-lemma→ {L · J} {L' · .J} {σ} {Γ} {Δ} {_} {B} (appl L→L') accB (⊢· L:γ _) P⇓ σ⇂LJ Unyσ x:B =
   let σ⇂L : σ ∶ Γ ⇀ Δ ⇂ L
       σ⇂L = proj₁ (lemmaσ⇂· σ⇂LJ)
-      Lσ→L'σ = SN-lemma→ L→L' accB L:γ P⇓ σ⇂L Unyσ x:B
-  in appl Lσ→L'σ
+      P , Lσ→P , P~L'σ = SN-lemma→ L→L' accB L:γ P⇓ σ⇂L Unyσ x:B
+      PJσ~L'Jσ : P · (J ∙ σ) ∼α L' · J ∙ σ 
+      PJσ~L'Jσ = ∼· P~L'σ ∼ρ
+      LJσ→PJσ : L · J ∙ σ →SN P · (J ∙ σ)
+      LJσ→PJσ = appl Lσ→P
+  in P · (J ∙ σ) , LJσ→PJσ , PJσ~L'Jσ
 
 SN-lemmaNe .{v y} {Γ} {_} {B} {.y} {N} (v {y}) _ _ N⇓  = thesis₁ , λ _ _ → sne (app v N⇓)
   where thesis₁ : ∀ {x σ Δ} → σ ∶ Γ ⇀ Δ ⇂ (v y) → Unary σ x N → Γ ⊢ v x ∶ B → SN (v y ∙ σ) × (y ≢ x → ∃ λ z → SNe z (v y ∙ σ))
@@ -200,12 +198,12 @@ SN-lemma {M} {Γ} {α} {B} {P} (exp {.M} {N} M→N N⇓) accB M:α P⇓ = thesis
         N:α = lemma⊢→α* M:α M→αN
         thesis₁ : ∀ {x σ Δ} → σ ∶ Γ ⇀ Δ ⇂ M → Unary σ x P → Γ ⊢ v x ∶ B → SN (M ∙ σ)
         thesis₁ {x} {σ} {Δ} σ⇂M Unyσ x:B =
-          let Mσ→Nσ = SN-lemma→ M→N accB M:α P⇓ σ⇂M Unyσ x:B
+          let _ , Mσ→P , P∼Nσ = SN-lemma→ M→N accB M:α P⇓ σ⇂M Unyσ x:B
               σ⇂N : σ ∶ Γ ⇀ Δ ⇂ N
               σ⇂N = λ y*N → σ⇂M ((dual-#-* lemma→α*#) y*N M→αN)
               Nσ⇓ : SN (N ∙ σ)
               Nσ⇓ = proj₁ (SN-lemma N⇓ accB N:α P⇓) σ⇂N Unyσ x:B
-          in exp Mσ→Nσ Nσ⇓
+          in exp Mσ→P (closureSN/α′ Nσ⇓ (∼σ P∼Nσ))
         thesis₂ : (∃ λ γ → α ≡ B ⟶ γ) → Γ ⊢ P ∶ B → SN (M · P)
         thesis₂ α=β→γ P:B =
           let NP⇓ = proj₂ (SN-lemma  N⇓ accB N:α P⇓) α=β→γ P:B

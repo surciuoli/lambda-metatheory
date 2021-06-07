@@ -1,5 +1,6 @@
 module StrongNormalizationB where
 
+open import SN
 open import SoundnessSN
 open import Term renaming (_⟶_ to _⇒_)
 open import Chi
@@ -14,6 +15,7 @@ open import Relation using (just; trans)
 open import UnaryB
 open import TypeLemmas
 open import SubstitutionCompatibilityLemmas
+open import PropertiesSN
 
 open import Data.Nat hiding (_*_)
 open import Relation.Binary.PropositionalEquality renaming (trans to trans≡)
@@ -33,40 +35,13 @@ open Lexicographic _ₜ<⁺_ (λ _ m n → m <′ n) renaming (_<_ to _ₜ,ₙ<_
 wfₜ,ₙ< : Well-founded _ₜ,ₙ<_
 wfₜ,ₙ< = wfΣ wfₜ<⁺ <-well-founded
 
--- Definitions
-
-height→  : ∀ {M N} → M →SN N → ℕ 
-heightNe : ∀ {M x} → SNe x M → ℕ 
-height   : ∀ {M} → SN M → ℕ 
-
-height→ (αsn M→N N∼P) = suc (height→ M→N)
-height→ (β N⇓) = suc (height N⇓)
-height→ (appl M→N) = suc (height→ M→N)
-
-heightNe v = 0
-heightNe (app M⇓ N⇓) = suc (heightNe M⇓ ⊔ height N⇓)
-
-height (abs M⇓) = suc (height M⇓)
-height (sne M⇓) = suc (heightNe M⇓)
-height (exp M→N N⇓) = suc (height→ M→N ⊔ height N⇓)
-
 -- Auxiliary lemmas
 
-m<′m⊔n+1 : ∀ m n → m <′ suc (m ⊔ n)
-m<′m⊔n+1 m n = s≤′s (≤⇒≤′ (m≤m⊔n m n))
-
-⊔-comm = IsCommutativeMonoid.comm (IsCommutativeSemiringWithoutOne.+-isCommutativeMonoid ⊔-⊓-0-isCommutativeSemiringWithoutOne)
-
-m<′n⊔m+1 : ∀ m n → m <′ suc (n ⊔ m)
-m<′n⊔m+1 m n with n ⊔ m | ⊔-comm n m
-m<′n⊔m+1 m n | .(m ⊔ n) | refl = m<′m⊔n+1 m n
-
 x→M⇒⊥ : ∀ {x M} → v x →SN M → ⊥
-x→M⇒⊥ (αsn x→M _) = x→M⇒⊥ x→M
+x→M⇒⊥ ()
 
 xM→N⇒⊥ : ∀ {x M N} → v x · M →SN N → ⊥
-xM→N⇒⊥ (appl (αsn x→M _)) = x→M⇒⊥ x→M
-xM→N⇒⊥ (αsn xM→N _) = xM→N⇒⊥ xM→N
+xM→N⇒⊥ (appl ()) 
 
 SNe-preservedby-σ→SN : ∀ {σ x M N} → SNe x M → IsVar (σ x) → M ∙ σ →SN N → ⊥
 SNe-preservedby-σ→SN {σ} {x} v isvarσx xσ→N with σ x
@@ -74,7 +49,6 @@ SNe-preservedby-σ→SN {σ} {x} v (isv {y}) y→M | v .y = ⊥-elim (x→M⇒�
 SNe-preservedby-σ→SN {σ} {x} (app v _) isvarσx xPσ→N with σ x
 SNe-preservedby-σ→SN {σ} {x} (app v _) (isv {y}) yPσ→N | v .y = ⊥-elim (xM→N⇒⊥ yPσ→N)
 SNe-preservedby-σ→SN {σ} {x} (app P⇓ Q⇓) isvarσx (appl Pσ→R) = SNe-preservedby-σ→SN P⇓ isvarσx Pσ→R
-SNe-preservedby-σ→SN {σ} {x} (app P⇓ Q⇓) isvarσx (αsn PQσ→R _) = SNe-preservedby-σ→SN (app P⇓ Q⇓) isvarσx PQσ→R
 
 SNe-preservedby-σ : ∀ {σ x M} → SNe x M → IsVar (σ x) → SN (M ∙ σ) → ∃ λ y → SNe y (M ∙ σ)
 SNe-preservedby-σ {σ} {x} v isvarσx xσ⇓ with σ x
@@ -84,15 +58,11 @@ SNe-preservedby-σ {σ} {x} (app P⇓ Q⇓) _ (sne (app {y} Pσ⇓ Qσ⇓)) = y 
 SNe-preservedby-σ {σ} {x} (app P⇓ Q⇓) isvarσx (exp PQσ→M _) = ⊥-elim (SNe-preservedby-σ→SN (app P⇓ Q⇓) isvarσx PQσ→M)
 
 →SN⊂→α : ∀ {M N} → M →SN N → M →α* N
-→SN⊂→α (αsn M→N N∼P) = trans (→SN⊂→α M→N) (just (inj₂ N∼P))
 →SN⊂→α (β _)  = just (inj₁ (ctxinj ▹β))
 →SN⊂→α (appl M→M') = app-star-l (→SN⊂→α M→M')
 
 lemmaσ⇂· : ∀ {σ Γ Δ P Q} → σ ∶ Γ ⇀ Δ ⇂ P · Q → (σ ∶ Γ ⇀ Δ ⇂ P) × (σ ∶ Γ ⇀ Δ ⇂ Q)
 lemmaσ⇂· σ⇂PQ = (λ x*P → σ⇂PQ (*·l x*P)) , (λ x*Q → σ⇂PQ (*·r x*Q))
-
-≡⇒α : ∀ {M N} → M ≡ N → M ∼α N
-≡⇒α {M} M≡N = subst₂ _∼α_ refl M≡N (∼ρ {M})
 
 -- Main lemma
 
@@ -121,10 +91,6 @@ SN-lemmaNe : ∀ {M Γ α β x N}
            → (∀ {σ Δ} → σ ∶ Γ ⇀ Δ ⇂ M → Unary σ N Γ β → SN (M ∙ σ))
              × ((∃ λ γ → α ≡ β ⇒ γ) → Γ ⊢ N ∶ β → SN (M · N)) 
 
-SN-lemma→ {_} {_} {σ} {Γ} {Δ} {α} {B} (αsn M→N N∼P) (acc hi) M:A P⇓ σ⇂M Unyσ =
-  let Q , Mσ→Q , Q∼Nσ = SN-lemma→ M→N (hi (B , height→ M→N) (right ≤′-refl)) M:A P⇓ σ⇂M Unyσ
-      Nσ∼Pσ = ≡⇒α (lemmaM∼M'→Mσ≡M'σ N∼P)
-  in Q , Mσ→Q , ∼τ Q∼Nσ Nσ∼Pσ
 SN-lemma→ {ƛ x L · J} {_} {σ} {Γ} {Δ} {α} {B} (β J⇓) (acc hi) (⊢· _ J:γ) P⇓ σ⇂ƛxLJ Unyσ =
   let z : V
       z = χ (σ , ƛ x L)
@@ -159,11 +125,11 @@ SN-lemmaNe {P · Q} {Γ} {_} {B} {.x} {N} (app {x} P⇓ Q⇓) (acc hi) (⊢· {�
               σ⇂P : σ ∶ Γ ⇀ Δ ⇂ P
               σ⇂P = λ x*P → σ⇂PQ (*·l x*P)
               Pσ⇓ : SN (P ∙ σ)
-              Pσ⇓ = proj₁ (SN-lemmaNe P⇓ (hi (B , m) (right (m<′m⊔n+1 m n))) P:γ→ε N⇓) σ⇂P Unyσ
+              Pσ⇓ = proj₁ (SN-lemmaNe P⇓ (hi (B , m) (right (m<′m⊔n+1 {m} {n}))) P:γ→ε N⇓) σ⇂P Unyσ
               σ⇂Q : σ ∶ Γ ⇀ Δ ⇂ Q
               σ⇂Q = λ x*Q → σ⇂PQ (*·r x*Q)
               Qσ⇓ : SN (Q ∙ σ)
-              Qσ⇓ = proj₁ (SN-lemma Q⇓ (hi (B , n) (right (m<′n⊔m+1 n m))) Q:γ N⇓) σ⇂Q Unyσ
+              Qσ⇓ = proj₁ (SN-lemma Q⇓ (hi (B , n) (right (m<′n⊔m+1 {n} {m}))) Q:γ N⇓) σ⇂Q Unyσ
               Pσ:γ→ε : Δ ⊢ P ∙ σ ∶ γ ⇒ ε
               Pσ:γ→ε = lemma⊢σM P:γ→ε σ⇂P                                                                            
               Qσ:γ : Δ ⊢ Q ∙ σ ∶ γ 
@@ -204,15 +170,15 @@ SN-lemma {M} {Γ} {α} {B} {P} (exp {.M} {N} M→N N⇓) (acc hi) M:α P⇓ = th
         N:α = lemma⊢→α* M:α M→αN
         thesis₁ : ∀ {σ Δ} → σ ∶ Γ ⇀ Δ ⇂ M → Unary σ P Γ B → SN (M ∙ σ)
         thesis₁ {σ} {Δ} σ⇂M Unyσ =
-          let _ , Mσ→P , P∼Nσ = SN-lemma→ M→N (hi (B , m) (right (m<′m⊔n+1 m n))) M:α P⇓ σ⇂M Unyσ
+          let _ , Mσ→P , P∼Nσ = SN-lemma→ M→N (hi (B , m) (right (m<′m⊔n+1 {m} {n}))) M:α P⇓ σ⇂M Unyσ
               σ⇂N : σ ∶ Γ ⇀ Δ ⇂ N
               σ⇂N = λ x*N → σ⇂M ((dual-#-* lemma→α*#) x*N M→αN)
               Nσ⇓ : SN (N ∙ σ)
-              Nσ⇓ = proj₁ (SN-lemma N⇓ (hi (B , n) (right (m<′n⊔m+1 n m))) N:α P⇓) σ⇂N Unyσ
-          in exp (αsn Mσ→P P∼Nσ) Nσ⇓
+              Nσ⇓ = proj₁ (SN-lemma N⇓ (hi (B , n) (right (m<′n⊔m+1 {n} {m}))) N:α P⇓) σ⇂N Unyσ
+          in exp Mσ→P (closureSN/α′ Nσ⇓ (∼σ P∼Nσ))
         thesis₂ : (∃ λ γ → α ≡ B ⇒ γ) → Γ ⊢ P ∶ B → SN (M · P)
         thesis₂ α=β→γ P:B =
-          let NP⇓ = proj₂ (SN-lemma  N⇓ (hi (B , n) (right (m<′n⊔m+1 n m))) N:α P⇓) α=β→γ P:B
+          let NP⇓ = proj₂ (SN-lemma  N⇓ (hi (B , n) (right (m<′n⊔m+1 {n} {m}))) N:α P⇓) α=β→γ P:B
           in exp (appl M→N) NP⇓ 
 
 SN-theo : ∀ {Γ M α} → Γ ⊢ M ∶ α → SN M
