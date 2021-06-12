@@ -13,7 +13,7 @@ open import SubstitutionLemmas
 open import ListProperties
 open import Relation using (just; trans)
 open import Unary
-open import TypeLemmas
+open import TypeLemmas using (lemma-ₜ<; _ₜ<⁺_; wfₜ<⁺)
 open import SubstitutionCompatibilityLemmas
 open import PropertiesSN 
 
@@ -57,6 +57,14 @@ weaken-dom {x} {M} {σ} {Γ} {Δ} σ⇂M = λ y*M → aux y*M
         aux {x} {y} (*ƛ x*M _) y∈Γ with y ≟ x
         ... | no _ = σ⇂M x*M y∈Γ
         aux {x} {.x} (*ƛ _ x≢x) _ | yes refl = ⊥-elim (x≢x refl)
+
+{-fresh-update : ∀ {x M N σ} → x # M → σ ∼α σ ≺+ (x , N) ⇂ M 
+fresh-update {x} x#M z z*M with x ≟ z
+fresh-update {x} x#M .x x*M | yes refl = ⊥-elim (lemma-free→¬# x*M x#M)
+fresh-update _ _ _ | no _ = ∼ρ
+
+coro-fresh-update : ∀ {x M N} → x # M → M  [ N / x ] ∼α M
+coro-fresh-update x#M = ∼τ (∼σ (lemma-subst-σ∼ (fresh-update x#M))) (∼σₛ lemma∙ι)-}
 
 -- Main lemma
 
@@ -166,7 +174,7 @@ SN-lemma {ƛ y P} {Γ} {δ ⟶ ε} {B} {N} (abs P⇓) (acc hi) (⊢ƛ P:ε) N⇓
               Pσ,y=z⇓ : SN (P ∙ (σ ≺+ (y , v z)))
               Pσ,y=z⇓ = proj₁ (SN-lemma P⇓ (hi (B , height P⇓) (right ≤′-refl)) P:ε N⇓) σ,y=z⇂P Unyσ,y=z x:B'
           in abs Pσ,y=z⇓
-        thesis₁ {.y} {σ} {Δ} σ⇂ƛyP Unyσ y:B | yes refl =
+        thesis₁ {.y} {σ} {Δ} σ⇂ƛyP Unyσ y:B | yes refl = -- cambiar esta manganeta por la clausura con alfa
           let z : V
               z = χ (σ , ƛ y P)
               u : V

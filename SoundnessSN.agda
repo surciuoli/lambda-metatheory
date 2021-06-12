@@ -2,14 +2,14 @@ module SoundnessSN where
 
 open import Chi
 open import Term renaming (_⟶_ to _⇒_) hiding (_∶_)
-open import Beta
+open import Beta renaming (_→α*_ to _↠_)
 open import Substitution hiding (_∘_)
 open import Alpha
 open import Relation Λ 
 open import ParallelReduction
 open import SubstitutionLemmas
 open import SubstitutionCompatibilityLemmas hiding (_↠_)
-open import Neutral
+open import Neutral using (wne; var; app)
 open import SN
 
 open import Relation.Nullary
