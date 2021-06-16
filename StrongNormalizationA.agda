@@ -16,6 +16,7 @@ open import Unary
 open import TypeLemmas using (lemma-ₜ<; _ₜ<⁺_; wfₜ<⁺)
 open import SubstitutionCompatibilityLemmas
 open import PropertiesSN 
+open import Renaming hiding (IsVar)
 
 open import Data.Nat hiding (_*_)
 open import Relation.Binary.PropositionalEquality renaming (trans to trans≡)
@@ -64,7 +65,30 @@ fresh-update {x} x#M .x x*M | yes refl = ⊥-elim (lemma-free→¬# x*M x#M)
 fresh-update _ _ _ | no _ = ∼ρ
 
 coro-fresh-update : ∀ {x M N} → x # M → M  [ N / x ] ∼α M
-coro-fresh-update x#M = ∼τ (∼σ (lemma-subst-σ∼ (fresh-update x#M))) (∼σₛ lemma∙ι)-}
+coro-fresh-update x#M = ∼τ (∼σ (lemma-subst-σ∼ (fresh-update x#M))) (∼σₛ lemma∙ι)
+
+unary-renaming : ∀ {σ x M} → (y : V) → Unary σ x M → Renaming (σ ≺+ (x , v y))
+unary-renaming = {!!}-}
+
+x→M⇒⊥ : ∀ {x M} → v x →SN M → ⊥
+x→M⇒⊥ ()
+
+xM→N⇒⊥ : ∀ {x M N} → v x · M →SN N → ⊥
+xM→N⇒⊥ (appl ())
+
+SNe-preservedby-σ→SN : ∀ {σ x M N} → SNe x M → IsVar (σ x) → M ∙ σ →SN N → ⊥
+SNe-preservedby-σ→SN {σ} {x} v isvarσx xσ→N with σ x
+SNe-preservedby-σ→SN {σ} {x} v (isv {y}) y→M | v .y = ⊥-elim (x→M⇒⊥ y→M)
+SNe-preservedby-σ→SN {σ} {x} (app v _) isvarσx xPσ→N with σ x
+SNe-preservedby-σ→SN {σ} {x} (app v _) (isv {y}) yPσ→N | v .y = ⊥-elim (xM→N⇒⊥ yPσ→N)
+SNe-preservedby-σ→SN {σ} {x} (app P⇓ Q⇓) isvarσx (appl Pσ→R) = SNe-preservedby-σ→SN P⇓ isvarσx Pσ→R
+
+SNe-preservedby-σ : ∀ {σ x M} → SNe x M → IsVar (σ x) → SN (M ∙ σ) → ∃ λ y → SNe y (M ∙ σ)
+SNe-preservedby-σ {σ} {x} v isvarσx xσ⇓ with σ x
+SNe-preservedby-σ {σ} {x} v (isv {.y}) (sne (v {.y})) | v y = y , v
+SNe-preservedby-σ {σ} {x} v (isv {.y}) (exp y→M _) | v y = ⊥-elim (SNe-preservedby-σ→SN (v {x}) (isv {y}) y→M)
+SNe-preservedby-σ {σ} {x} (app P⇓ Q⇓) _ (sne (app {y} Pσ⇓ Qσ⇓)) = y , app Pσ⇓ Qσ⇓ 
+SNe-preservedby-σ {σ} {x} (app P⇓ Q⇓) isvarσx (exp PQσ→M _) = ⊥-elim (SNe-preservedby-σ→SN (app P⇓ Q⇓) isvarσx PQσ→M)
 
 -- Main lemma
 
@@ -91,7 +115,7 @@ SN-lemmaNe : ∀ {M Γ α β y N}
            → Acc _ₜ,ₙ<_ (β , heightNe M⇓)
            → Γ ⊢ M ∶ α
            → SN N
-           → (∀ {x σ Δ} → σ ∶ Γ ⇀ Δ ⇂ M → Unary σ x N → Γ ⊢ v x ∶ β → SN (M ∙ σ) × (y ≢ x → ∃ λ z → SNe z (M ∙ σ)))
+           → (∀ {x σ Δ} → σ ∶ Γ ⇀ Δ ⇂ M → Unary σ x N → Γ ⊢ v x ∶ β → SN (M ∙ σ))
              × ((∃ λ γ → α ≡ β ⟶ γ) → Γ ⊢ N ∶ β → SN (M · N)) 
 
 SN-lemma→ {ƛ y M · N} {_} {σ} {Γ} {Δ} {α} {B} {_} {x} (β N⇓) (acc hi) (⊢· _ N:γ) P⇓ σ⇂ƛyMN Unyσ x:B =
@@ -115,35 +139,37 @@ SN-lemma→ {L · J} {L' · .J} {σ} {Γ} {Δ} {_} {B} (appl L→L') (acc hi) (�
   in P · (J ∙ σ) , LJσ→PJσ , PJσ~L'Jσ
 
 SN-lemmaNe .{v y} {Γ} {_} {B} {.y} {N} (v {y}) _ _ N⇓  = thesis₁ , λ _ _ → sne (app v N⇓)
-  where thesis₁ : ∀ {x σ Δ} → σ ∶ Γ ⇀ Δ ⇂ (v y) → Unary σ x N → Γ ⊢ v x ∶ B → SN (v y ∙ σ) × (y ≢ x → ∃ λ z → SNe z (v y ∙ σ))
+  where thesis₁ : ∀ {x σ Δ} → σ ∶ Γ ⇀ Δ ⇂ (v y) → Unary σ x N → Γ ⊢ v x ∶ B → SN (v y ∙ σ)
         thesis₁ {x} {σ} _ Unyσ _ with y ≟ x
         ... | no y≢x with σ y | (proj₂ Unyσ) y≢x
-        ... | .(v z) | isv {z} = sne v , λ _ → z , v
+        ... | .(v z) | isv {z} = sne v 
         thesis₁ {.y} {σ} _ Unyσ _ | yes refl with σ y | proj₁ Unyσ
-        ... | .N | refl = N⇓ , λ y≢x → ⊥-elim (y≢x refl)
+        ... | .N | refl = N⇓ 
 SN-lemmaNe {P · Q} {Γ} {_} {B} {.y} {N} (app {y} P⇓ Q⇓) (acc hi) (⊢· {γ} {ε} P:γ→ε Q:γ) N⇓ = 
   thesis₁ , λ _ _ → sne (app (app P⇓ Q⇓) N⇓)
     where
-        thesis₁ : ∀ {x σ Δ} → σ ∶ Γ ⇀ Δ ⇂ P · Q → Unary σ x N → Γ ⊢ v x ∶ B → SN (P · Q ∙ σ) × (y ≢ x → ∃ λ z → SNe z (P · Q ∙ σ))
+        thesis₁ : ∀ {x σ Δ} → σ ∶ Γ ⇀ Δ ⇂ P · Q → Unary σ x N → Γ ⊢ v x ∶ B → SN (P · Q ∙ σ)
         thesis₁ {x} {σ} {Δ} σ⇂PQ Unyσ x:B with y ≟ x
         ... | no y≢x =
           let m , n = heightNe P⇓ , height Q⇓
               σ⇂P : σ ∶ Γ ⇀ Δ ⇂ P
               σ⇂P = λ y*P → σ⇂PQ (*·l y*P)
+              Pσ⇓ : SN (P ∙ σ)
+              Pσ⇓ = proj₁ (SN-lemmaNe P⇓ (hi (B , m) (right (m<′m⊔n+1 {m} {n}))) P:γ→ε N⇓) σ⇂P Unyσ x:B
               Pσ⇓ : ∃ λ z → SNe z (P ∙ σ)
-              Pσ⇓ = proj₂ (proj₁ (SN-lemmaNe P⇓ (hi (B , m) (right (m<′m⊔n+1 {m} {n}))) P:γ→ε N⇓) σ⇂P Unyσ x:B) y≢x
+              Pσ⇓ = SNe-preservedby-σ P⇓ (proj₂ Unyσ y≢x) Pσ⇓ 
               σ⇂Q : σ ∶ Γ ⇀ Δ ⇂ Q
               σ⇂Q = λ y*Q → σ⇂PQ (*·r y*Q)
               Qσ⇓ : SN (Q ∙ σ)
               Qσ⇓ = proj₁ (SN-lemma Q⇓ (hi (B , n) (right (m<′n⊔m+1 {n} {m}))) Q:γ N⇓) σ⇂Q Unyσ x:B
               PQσ⇓y = app (proj₂ Pσ⇓) Qσ⇓
-          in sne PQσ⇓y , λ _ → (proj₁ Pσ⇓ , PQσ⇓y)
+          in sne PQσ⇓y 
         thesis₁ {.y} {σ} {Δ} σ⇂PQ Unyσ y:B | yes refl =
           let m , n = heightNe P⇓ , height Q⇓
               σ⇂P : σ ∶ Γ ⇀ Δ ⇂ P
               σ⇂P = λ y*P → σ⇂PQ (*·l y*P)
               Pσ⇓ : SN (P ∙ σ)
-              Pσ⇓ = proj₁ (proj₁ (SN-lemmaNe P⇓ (hi (B , m) (right (m<′m⊔n+1 {m} {n}))) P:γ→ε N⇓) σ⇂P Unyσ y:B)
+              Pσ⇓ = proj₁ (SN-lemmaNe P⇓ (hi (B , m) (right (m<′m⊔n+1 {m} {n}))) P:γ→ε N⇓) σ⇂P Unyσ y:B
               σ⇂Q : σ ∶ Γ ⇀ Δ ⇂ Q
               σ⇂Q = λ y*Q → σ⇂PQ (*·r y*Q)
               Qσ⇓ : SN (Q ∙ σ)
@@ -154,11 +180,9 @@ SN-lemmaNe {P · Q} {Γ} {_} {B} {.y} {N} (app {y} P⇓ Q⇓) (acc hi) (⊢· {�
               Qσ:γ = lemma⊢σM Q:γ σ⇂Q
               γ<β : γ ₜ<⁺ B
               γ<β = lemma-ₜ< (lemma-ne P⇓) y:B P:γ→ε
-          in proj₂ (SN-lemma Pσ⇓ (hi (γ , height Pσ⇓) (left γ<β)) Pσ:γ→ε Qσ⇓) (ε , refl) Qσ:γ , λ y≢x → ⊥-elim (y≢x refl)
+          in proj₂ (SN-lemma Pσ⇓ (hi (γ , height Pσ⇓) (left γ<β)) Pσ:γ→ε Qσ⇓) (ε , refl) Qσ:γ
                                   
-SN-lemma {β = B} (sne M⇓) (acc hi) M:α N⇓ =
-  let th₁ , th₂ = SN-lemmaNe M⇓ (hi (B , heightNe M⇓) (right ≤′-refl)) M:α N⇓
-  in (λ p1 p2 p3 → proj₁ (th₁ p1 p2 p3)) , th₂ 
+SN-lemma {β = B} (sne M⇓) (acc hi) M:α N⇓ = SN-lemmaNe M⇓ (hi (B , heightNe M⇓) (right ≤′-refl)) M:α N⇓
 SN-lemma {ƛ y P} {Γ} {δ ⟶ ε} {B} {N} (abs P⇓) (acc hi) (⊢ƛ P:ε) N⇓ = thesis₁ , thesis₂ P:ε
   where thesis₁ : ∀ {x σ Δ} → σ ∶ Γ ⇀ Δ ⇂ ƛ y P → Unary σ x N → Γ ⊢ v x ∶ B → SN (ƛ y P ∙ σ)
         thesis₁ {x} {σ} {Δ} σ⇂ƛyP Unyσ x:B with y ≟ x
