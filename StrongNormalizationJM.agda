@@ -1,4 +1,4 @@
-module StrongNormalizationA where
+module StrongNormalizationJM where
 
 open import SN
 open import SoundnessSN

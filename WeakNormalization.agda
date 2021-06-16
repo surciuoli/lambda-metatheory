@@ -10,7 +10,7 @@ open import Alpha
 open import SubstitutionLemmas
 open import ListProperties
 open import Relation using (just; trans) renaming (refl to reflR)
-open import UnaryB
+--open import Unary
 open import TypeLemmas
 open import ParallelReduction
 open import SubstitutionCompatibilityLemmas hiding (_↠_)
@@ -35,6 +35,8 @@ wfₜ,ₙ< : Well-founded _ₜ,ₙ<_
 wfₜ,ₙ< = wfΣ wfₜ<⁺ <-well-founded
 
 -- Definitions
+
+_↠_ = _→α*_
 
 data WN : Λ → Set
 data WNe : V → Λ → Set 
@@ -122,6 +124,32 @@ lemma₃ : ∀ {σ x y M} → wne x M → σ x ≡ v y → wne y (M ∙ σ)
 lemma₃ {σ} {x} var σx≡y with σ x
 lemma₃ var refl | v y = var
 lemma₃ (app wneM) σx≡y = app (lemma₃ wneM σx≡y)
+
+-- Old definition of Unary (UnaryB.agda)
+
+data IsVar : Λ → Set where
+  isv : ∀ {x} → IsVar (v x)
+
+Unary : Σ → Λ → Cxt → Type → Set
+Unary σ M Γ α = ∀ {x} → IsVar (σ x) ⊎ σ x ≡ M × (Γ ⊢ v x ∶ α)
+
+lemma-Unaryι : ∀ {x α Γ M} → Γ ⊢ M ∶ α → Unary (ι ≺+ (x , M)) M (Γ ‚ x ∶ α) α
+lemma-Unaryι {x} M:α {y} with x ≟ y 
+lemma-Unaryι {x} M:α .{x} | yes refl = inj₂ (refl , ⊢v (here refl))
+... | no _ = inj₁ isv 
+
+lemma-Unary≺+ : ∀ {x z α Γ M σ β} → Unary σ M Γ α → Unary (σ ≺+ (x , v z)) M (Γ ‚ x ∶ β) α
+lemma-Unary≺+ {x} {z} Unyσ {y} with x ≟ y
+lemma-Unary≺+ {x} {z} Unyσ .{x} | yes refl = inj₁ isv 
+... | no x≢y with Unyσ {y}
+... | inj₁ isvar = inj₁ isvar
+... | inj₂ (refl , Γ⊢y:β) = inj₂ (refl , lemmaWeakening⊢# (#v (sym≢ x≢y)) Γ⊢y:β)
+
+IsVar⇒∃y : (σ : Σ) → (x : V) → IsVar (σ x) → ∃ λ y → σ x ≡ v y
+IsVar⇒∃y σ x IsVarσx with σ x
+IsVar⇒∃y σ x (isv {y}) | v {.y} = y , refl
+
+-- TODO: Refactor to use current definition (Unary.agda)
 
 -- Soundness WN
   
