@@ -8,6 +8,7 @@ open import Alpha
 open import SubstitutionLemmas
 open import SubstitutionCompatibilityLemmas renaming (lemma∼α∙ to subst-comp)
 open import Chi
+open import IsVar
 
 open import Relation.Binary.PropositionalEquality using (sym; subst₂; refl; trans)
 open import Relation.Binary.Core hiding (_⇒_)
@@ -108,3 +109,22 @@ antirenaming′ Renρ SNMρ = proj₁ (antirenaming Renρ SNMρ (<-well-founded 
 
 closureSN/α′ : ∀ {M N} → SN M → M ∼α N → SN N
 closureSN/α′ SNM M∼N = proj₁ (closureSN/α SNM (<-well-founded (height SNM)) M∼N)
+
+renamIm : ∀ {ρ} → Renaming ρ → V → V 
+renamIm {ρ} Renρ x with ρ x | Renρ x
+... | .(v y) | isVar y = y
+
+renamNe : ∀ {ρ x M} → (ren : Renaming ρ) → SNe x M → SNe (renamIm ren x) (M ∙ ρ)
+renam : ∀ {ρ M} → Renaming ρ → SN M → SN (M ∙ ρ)
+renam→ : ∀ {ρ M N} → Renaming ρ → M →SN N → Σ[ P ∈ Λ ] (M ∙ ρ →SN P × P ∼α N ∙ ρ)
+
+renamNe {ρ} {x} Renρ v with ρ x | Renρ x
+... | .(v y) | isVar y = v {y}
+renamNe Renρ (app SNeM SNN) = app (renamNe Renρ SNeM) (renam Renρ SNN)
+renam Renρ (sne SNeM) = sne (renamNe Renρ SNeM)
+renam {ρ} {ƛ x M} Renρ (abs SNM) = abs (renam (rename≺+ {x} {χ (ρ , ƛ x M)} Renρ) SNM)
+renam Renρ (exp M→N SNN) with renam→ Renρ M→N
+... | P , Mρ→P , P∼Nρ = exp Mρ→P (closureSN/α′ (renam Renρ SNN) (∼σ P∼Nρ))
+renam→ {ρ} {ƛ x M · N} Renρ (β SNN) = let y = χ (ρ , ƛ x M) in (M ∙ ρ ≺+ (x , v y)) ∙ ι ≺+ (y , N ∙ ρ) , β (renam Renρ SNN) , subst-comp (χ-lemma2 ρ (ƛ x M))
+renam→ {ρ} Renρ (appl {N = N} M→M′) with renam→ Renρ M→M′
+... | P′ , Mρ→P′ , P′≡M′ρ = P′ · (N ∙ ρ) , appl Mρ→P′ , ∼· P′≡M′ρ ∼ρ

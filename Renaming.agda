@@ -3,14 +3,12 @@ module Renaming where
 open import Term
 open import Substitution
 open import Chi
+open import IsVar
 
 open import Data.Product hiding (Σ)
 open import Data.Nat
 open import Relation.Nullary
 open import Relation.Binary.PropositionalEquality
-
-data IsVar : Λ → Set where
-  isVar : (x : V) → IsVar (v x)
   
 Renaming : Σ → Set
 Renaming ρ = (x : V) → IsVar (ρ x)
