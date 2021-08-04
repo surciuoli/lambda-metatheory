@@ -25,15 +25,15 @@ open Any.Membership-≡ renaming (_∈_ to _∈l_; _∉_ to _∉l_) hiding (_⊆
 
 Red : Λ → Cxt → Type → Set
 Red M Γ τ = (Γ ⊢ M ∶ τ) × SN M
-Red M Γ (α ⟶ β) = ∀ {Δ N} → Γ ⊆ Δ → Δ ⊢ N ∶ α → Red N Δ α → Red (M · N) Δ β
+Red M Γ (α ⟶ β) = ∀ {Δ N} → Γ ⊆ Δ → Red N Δ α → Red (M · N) Δ β
 
 closure-Red/α : ∀ {α M N Γ} → M ∼α N → Red M Γ α → Red N Γ α
 closure-Red/α {τ} M∼N (M:τ , M⇓) = lemma⊢α M:τ M∼N , closureSN/α′ M⇓ M∼N
-closure-Red/α {α ⟶ β} {M} {N} M∼N RedPα→RedMPβ = λ {Δ} {P} Γ⊆Δ P:α RedPα → closure-Red/α (∼· M∼N ∼ρ) (RedPα→RedMPβ Γ⊆Δ P:α RedPα)
+closure-Red/α {α ⟶ β} {M} {N} M∼N RedPα→RedMPβ = λ {Δ} {P} Γ⊆Δ RedPα → closure-Red/α (∼· M∼N ∼ρ) (RedPα→RedMPβ Γ⊆Δ RedPα)
 
 Red⊆ : ∀ {α Γ Δ M} → Γ ⊆ Δ → Red M Γ α → Red M Δ α
 Red⊆ {τ} Γ⊆Δ (M:τ , SNM) = (lemmaWeakening⊢ Γ⊆Δ M:τ , SNM)
-Red⊆ {α ⟶ β} Γ⊆Δ RedN→RedMN Δ⊆E N:α RedN = RedN→RedMN (τ⊆ Γ⊆Δ Δ⊆E) N:α RedN
+Red⊆ {α ⟶ β} Γ⊆Δ RedN→RedMN Δ⊆E RedN = RedN→RedMN (τ⊆ Γ⊆Δ Δ⊆E) RedN
 
 →SN⇒→α* : ∀ {M N} → M →SN N → M →α* N
 →SN⇒→α* (βSN _)  = just (inj₁ (ctxinj ▹β))
@@ -79,14 +79,14 @@ CR2 : ∀ {α Γ M N} → Γ ⊢ M ∶ α → M →SN N → Red N Γ α → Red 
 CR3 : ∀ {α Γ M x} → Γ ⊢ M ∶ α → SNe x M → Red M Γ α
 
 CR1 {τ} p = p
-CR1 {α ⟶ β} {Γ} {M} RedNα→RedMNβ with CR1 {β} {Γ ‚ ξ M Γ ∶ α} (RedNα→RedMNβ (Γ⊆Γ,x (ξ-lemma₂ M Γ)) last-v (CR3 {α} last-v v))
+CR1 {α ⟶ β} {Γ} {M} RedNα→RedMNβ with CR1 {β} {Γ ‚ ξ M Γ ∶ α} (RedNα→RedMNβ (Γ⊆Γ,x (ξ-lemma₂ M Γ)) (CR3 {α} last-v v))
 ... | (⊢· Γ,x:α⊢M:α'⟶β Γ,x:α⊢x:α') , Mx⇓ with lemma-≡Γx Γ,x:α⊢x:α' last-v
 ... | refl = lemmaStrengthening⊢# (ξ-lemma₁ M Γ) Γ,x:α⊢M:α'⟶β , extensionality Mx⇓
 CR2 {τ} M:τ M→N (N:τ , N⇓) = (M:τ , exp M→N N⇓)
-CR2 {α ⟶ β} {Γ} {M} {N} M:α⟶β M→N RedPα→RedNPβ =
-  λ {Δ} {P} Γ⊆Δ P:α RedPα → CR2 (⊢· (lemmaWeakening⊢ Γ⊆Δ M:α⟶β) P:α) (appl M→N) (RedPα→RedNPβ Γ⊆Δ P:α RedPα)
+CR2 {A ⟶ B} {Γ} {M} {N} M:A⟶B M→N RedPα→RedNPβ =
+  λ {Δ} {P} Γ⊆Δ RedPα → CR2 (⊢· (lemmaWeakening⊢ Γ⊆Δ M:A⟶B) (proj₁ (CR1 RedPα))) (appl M→N) (RedPα→RedNPβ Γ⊆Δ RedPα)
 CR3 {τ} M:α M⇓ = (M:α , sne M⇓)
-CR3 {α ⟶ β} M:α⟶β M⇓ = λ {Δ} {N} Γ⊆Δ N:α RedNα → CR3 (⊢· (lemmaWeakening⊢ Γ⊆Δ M:α⟶β) N:α) (app M⇓ (proj₂ (CR1 RedNα)))
+CR3 {α ⟶ β} M:α⟶β M⇓ = λ {Δ} {N} Γ⊆Δ RedNα → CR3 (⊢· (lemmaWeakening⊢ Γ⊆Δ M:α⟶β) (proj₁ (CR1 RedNα))) (app M⇓ (proj₂ (CR1 RedNα)))
 
 -- REDUCIBLE SUBSTITUTIONS
 
@@ -118,13 +118,13 @@ red-subst→typed σ∶Γ⇀Δ x*M x∈Γ = proj₁ (CR1 (σ∶Γ⇀Δ x*M x∈�
 subst-lemma : ∀ {σ Γ Δ M α} → Γ ⊢ M ∶ α → σ ∶ Γ ⇀Red Δ ⇂ M → Red (M ∙ σ) Δ α
 subst-lemma (⊢v x∈Γ) σ:Γ⇀Δ = σ:Γ⇀Δ *v x∈Γ
 subst-lemma (⊢· M:α⟶β N:α) σ:Γ⇀Δ =
-  subst-lemma M:α⟶β (proj₁ (⇀Red· σ:Γ⇀Δ)) ρ⊆ (lemma⊢σM N:α (red-subst→typed (proj₂ (⇀Red· σ:Γ⇀Δ)))) (subst-lemma N:α (proj₂ (⇀Red· σ:Γ⇀Δ)))
-subst-lemma {σ} {Γ} {Δ} {ƛ x M} {α ⟶ β} (⊢ƛ M:β) σ:Γ⇀Δ⇂ƛxM {E} {N} Δ⊆E N:α RedN =
+  subst-lemma M:α⟶β (proj₁ (⇀Red· σ:Γ⇀Δ)) ρ⊆ (subst-lemma N:α (proj₂ (⇀Red· σ:Γ⇀Δ)))
+subst-lemma {σ} {Γ} {Δ} {ƛ x M} {α ⟶ β} (⊢ƛ M:β) σ:Γ⇀Δ⇂ƛxM {E} {N} Δ⊆E RedN =
   let RedMσ,x=N = subst-lemma M:β (⇀Red≺+ RedN (⇀Red⊆ Δ⊆E σ:Γ⇀Δ⇂ƛxM))
       RedMσ,x=y,y=N = closure-Red/α (∼σ (corollary1SubstLemma (χ-lemma2 σ (ƛ x M)))) RedMσ,x=N
       ƛxMσN→Mσ,x=y,y=N = βSN (proj₂ (CR1 RedN))
       ƛxMσ:α⟶β = lemma⊢σM (⊢ƛ M:β) (red-subst→typed σ:Γ⇀Δ⇂ƛxM)
-      ƛxMσN→Mσ,x=y,y=N:β = ⊢· (lemmaWeakening⊢ Δ⊆E ƛxMσ:α⟶β) N:α
+      ƛxMσN→Mσ,x=y,y=N:β = ⊢· (lemmaWeakening⊢ Δ⊆E ƛxMσ:α⟶β) (proj₁ (CR1 RedN))
   in CR2 ƛxMσN→Mσ,x=y,y=N:β ƛxMσN→Mσ,x=y,y=N RedMσ,x=y,y=N
 
 theo : ∀ {Γ M α} → Γ ⊢ M ∶ α → Red M Γ α
