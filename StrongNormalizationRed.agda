@@ -75,19 +75,20 @@ lemma-≡Γx : ∀ {α β Γ x} → Γ ⊢ v x ∶ α → Γ ⊢ v x ∶ β → 
 lemma-≡Γx (⊢v x∈Γ₁) (⊢v x∈Γ₂) = lemma∈!⟨⟩ x∈Γ₁ x∈Γ₂
 
 CR1 : ∀ {α Γ M} → Red M Γ α → (Γ ⊢ M ∶ α) × SN M 
-CR2 : ∀ {α Γ M N} → Γ ⊢ M ∶ α → M →SN N → Red N Γ α → Red M Γ α
 CR3 : ∀ {α Γ M x} → Γ ⊢ M ∶ α → SNe x M → Red M Γ α
 
 CR1 {τ} p = p
 CR1 {α ⟶ β} {Γ} {M} RedNα→RedMNβ with CR1 {β} {Γ ‚ ξ M Γ ∶ α} (RedNα→RedMNβ (Γ⊆Γ,x (ξ-lemma₂ M Γ)) (CR3 {α} last-v v))
 ... | (⊢· Γ,x:α⊢M:α'⟶β Γ,x:α⊢x:α') , Mx⇓ with lemma-≡Γx Γ,x:α⊢x:α' last-v
 ... | refl = lemmaStrengthening⊢# (ξ-lemma₁ M Γ) Γ,x:α⊢M:α'⟶β , extensionality Mx⇓
-CR2 {τ} M:τ M→N (N:τ , N⇓) = (M:τ , exp M→N N⇓)
-CR2 {A ⟶ B} {Γ} {M} {N} M:A⟶B M→N RedPα→RedNPβ =
-  λ {Δ} {P} Γ⊆Δ RedPα → CR2 (⊢· (lemmaWeakening⊢ Γ⊆Δ M:A⟶B) (proj₁ (CR1 RedPα))) (appl M→N) (RedPα→RedNPβ Γ⊆Δ RedPα)
 CR3 {τ} M:α M⇓ = (M:α , sne M⇓)
 CR3 {α ⟶ β} M:α⟶β M⇓ = λ {Δ} {N} Γ⊆Δ RedNα → CR3 (⊢· (lemmaWeakening⊢ Γ⊆Δ M:α⟶β) (proj₁ (CR1 RedNα))) (app M⇓ (proj₂ (CR1 RedNα)))
 
+CR2 : ∀ {α Γ M N} → Γ ⊢ M ∶ α → M →SN N → Red N Γ α → Red M Γ α
+CR2 {τ} M:τ M→N (N:τ , N⇓) = (M:τ , exp M→N N⇓)
+CR2 {A ⟶ B} {Γ} {M} {N} M:A⟶B M→N RedPα→RedNPβ =
+  λ {Δ} {P} Γ⊆Δ RedPα → CR2 (⊢· (lemmaWeakening⊢ Γ⊆Δ M:A⟶B) (proj₁ (CR1 RedPα))) (appl M→N) (RedPα→RedNPβ Γ⊆Δ RedPα)
+  
 -- REDUCIBLE SUBSTITUTIONS
 
 _∶_⇀Red_⇂_ : Σ → Cxt → Cxt → Λ → Set
