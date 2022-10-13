@@ -1,4 +1,4 @@
-# Meta-theory of the Simply Typed Lambda Calculus
+# Meta-theory of the Simply-typed Lambda Calculus
 
 This project contains a framwork for the pure lambda calculus. Subsitution is based on Stoughton's approach of multiple substitutinos.
 
