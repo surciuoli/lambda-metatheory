@@ -1,6 +1,6 @@
 # Meta-theory of the Simply-typed Lambda Calculus
 
-This project contains a framwork for the meta-theory of the pure lambda calculus. Subsitution is based on Stoughton's approach (multiple substitutions).
+This project contains a framework for the meta-theory of the pure lambda calculus with names (as opposed to nameless approaches, e.g. de Bruijn indices). Subsitution is based upon Stoughton's work on multiple substitutions.
 
 On top of the framework, two proofs of the Strong Normalization Theorem for the simply-typed lambda calculus are given. One proof is due to the method of Joachimski and Matthes, and the other is based on the method by Tait/Girard.
 
